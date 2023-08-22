@@ -11,6 +11,7 @@ var mutex *sync.RWMutex
 
 func init() {
 	mutex = &sync.RWMutex{}
+	cache = make(map[string]centry)
 }
 
 type centry struct {
