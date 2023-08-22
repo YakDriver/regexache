@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	maintenanceIntervalDefault = time.Millisecond * 30000
+	maintenanceIntervalDefault = time.Duration(0)
 	expirationDefault          = time.Millisecond * 10000
 	minimumUsesDefault         = int64(2)
 	cleanTimeDefault           = time.Millisecond * 1000
