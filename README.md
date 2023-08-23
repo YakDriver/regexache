@@ -1,5 +1,60 @@
 # regexache
-Testing
+
+`regexache` is a thread-safe regular expression cache, providing a drop-in replacement for `regexp.MustCompile()` (`regexache` calls `regexp.MustCompile()` on your behalf to populate the cache). This special purpose cache specifically addresses regular expressions, which use a lot of memory. In a [project](https://github.com/hashicorp/terraform-provider-aws) with about ~4500 regexes, using `regexache` saved nearly 20% total memory use.
+
+Unlike excellent caches, such as [go-cache](https://github.com/patrickmn/go-cache) or memcached, the calling code does not need to know anything about the cache or instantiate it, simply dropping in `regexache.MustCompile()` in place of `regexp.MustCompile()`. There are cons to this approach but for an existing project, they are outweighed by not needing to rework existing code (other than the drop in).
+
+For projects with few regular expressions, caching is unlikely to improve memory use--stick with static use of `regexp.MustCompile()`. For projects with thousands of regular expressions, and especially untracked duplicates, using `regexache` can save significant memory.
+
+Potential problems with using `regexache` include cache contention and preventing garbage collection of regular expressions. Cache contention results from the cache map being read-locked for reads and locked for updates. For garbage collection, if you're not using `regexache` and instantiate a regular expressions locally and it goes out of scope without any references to it remaining, Go may reclaim the memory. However, `regexache` keeps pointers to the regular expressions in the cache so they cannot be garbage collected until the entry expires and is cleaned out of the cache. Benchmark various expiration settings to see what works best.
+
+## Using regexache
+
+Using `regexache` is simple. If this is your code before, see below for code after.
+
+Before `regexache`:
+
+```go
+package main
+
+import (
+	"fmt"
+	"regexp"
+)
+
+func main() {
+	var validID = regexp.MustCompile(`^[a-z]+\[[0-9]+\]$`)
+
+	fmt.Println(validID.MatchString("adam[23]"))
+	fmt.Println(validID.MatchString("eve[7]"))
+	fmt.Println(validID.MatchString("Job[48]"))
+	fmt.Println(validID.MatchString("snakey"))
+}
+```
+([Playground](https://go.dev/play/p/e0MHgtJFNHE))
+
+After `regexache`:
+
+```go
+package main
+
+import (
+	"fmt"
+
+	"github.com/YakDriver/regexache"
+)
+
+func main() {
+	var validID = regexache.MustCompile(`^[a-z]+\[[0-9]+\]$`)
+
+	fmt.Println(validID.MatchString("adam[23]"))
+	fmt.Println(validID.MatchString("eve[7]"))
+	fmt.Println(validID.MatchString("Job[48]"))
+	fmt.Println(validID.MatchString("snakey"))
+}
+```
+([Playground](https://go.dev/play/p/q0apcbfeMV-))
+
 
 ## Environment Variables
 
