@@ -2,7 +2,7 @@
 
 `regexache` is a thread-safe regular expression cache, providing a drop-in replacement for `regexp.MustCompile()` (`regexache` calls `regexp.MustCompile()` on your behalf to populate the cache). This special purpose cache specifically addresses regular expressions, which use a lot of memory. In a [project](https://github.com/hashicorp/terraform-provider-aws) with about ~4500 regexes, using `regexache` saved nearly 20% total memory use.
 
-Unlike excellent caches, such as [go-cache](https://github.com/patrickmn/go-cache) or memcached, the calling code does not need to know anything about the cache or instantiate it, simply dropping in `regexache.MustCompile()` in place of `regexp.MustCompile()`. There are cons to this approach but for an existing project, they are outweighed by not needing to rework existing code (other than the drop in).
+Unlike excellent caches, such as [go-cache](https://github.com/patrickmn/go-cache) or memcached, the calling code does not need to know anything about the cache or instantiate it, simply dropping in `regexache.MustCompile()` in place of `regexp.MustCompile()`. There are cons to this approach but for an existing large project, they may be outweighed by not needing to rework existing code (other than the drop in).
 
 For projects with few regular expressions, caching is unlikely to improve memory use--stick with static use of `regexp.MustCompile()`. For projects with thousands of regular expressions, and especially untracked duplicates, using `regexache` can save significant memory.
 
@@ -66,15 +66,17 @@ func main() {
 | REGEXACHE_MINIMUM_USES | If you look up an entry more than this number of times, `regexache` will not remove it from the cache regardless of `REGEXACHE_EXPIRATION`. A value of `0` means that the number of times you lookup an entry is disregarded and `regexache` will remove the entry for expiration. |
 | REGEXACHE_CLEAN_TIME | Milliseconds to spend cleaning the cache each maintenance cycle. The cache is locked during cleaning so longer times may reduce performance. Default: 1000 (1 second). |
 
-## Examples
+## Tests
 
-Don't use cache. (Single VPC: 6.76GB, 2-AppRunner: 17.89GB)
+Control (not using the cache).
+**Results** - Single VPC: 6.76GB, Two AppRunner: 17.89GB
 
 ```
 export REGEXACHE_OFF=1
 ```
 
-Single VPC: 5.62GB, 2-AppRunner: 15.01GB
+Clean cache every 1s for 0.1s. Expire entries after 0.5s. Protect entries from expiration after 10 uses.
+**Results** - Single VPC: 5.62GB (16.9% less), Two AppRunner: 15.01GB (16.1% less)
 
 ```
 export REGEXACHE_MAINTENANCE_INTERVAL=1000
@@ -83,13 +85,15 @@ export REGEXACHE_MINIMUM_USES=10
 export REGEXACHE_CLEAN_TIME=100
 ```
 
-Single VPC: 5.54GB, 2-AppRunner: 14.81GB
+No expiration or cache cleaning.
+**Results** - Single VPC: 5.54GB (18.0% less), Two AppRunner: 14.81GB (17.2% less)
 
 ```
 export REGEXACHE_MAINTENANCE_INTERVAL=0
 ```
 
-Single VPC: 5.67GB, 2-AppRunner: 15.05GB
+Clean cache every 2s for 0.1s. Expire entries after 2s. Protect entries from expiration after 3 uses.
+**Results** - Single VPC: 5.67GB (16.1% less), Two AppRunner: 15.05GB (15.9% less)
 
 ```
 export REGEXACHE_MAINTENANCE_INTERVAL=2000
@@ -98,7 +102,8 @@ export REGEXACHE_MINIMUM_USES=3
 export REGEXACHE_CLEAN_TIME=100
 ```
 
-Single VPC: 5.62GB, 2-AppRunner: 15.00GB
+Clean cache every 2s for 0.1s. Expire entries after 2s. Protect entries from expiration after 3 uses.
+**Results** - Single VPC: 5.62GB (16.9% less), Two AppRunner: 15.00GB (16.2% less)
 
 ```
 export REGEXACHE_MAINTENANCE_INTERVAL=5000
@@ -106,6 +111,8 @@ export REGEXACHE_EXPIRATION=1000
 export REGEXACHE_MINIMUM_USES=2
 export REGEXACHE_CLEAN_TIME=500
 ```
+
+Example of a running memory profile test of a single VPC acceptance test:
 
 ```
 TF_ACC=1 go test \
@@ -118,6 +125,8 @@ TF_ACC=1 go test \
     -timeout 60m
 pprof -http=localhost:4599 mem.prof
 ```
+
+Example of a running memory profile test of two parallel AppRunner acceptance tests:
 
 ```
 TF_ACC=1 go test \
