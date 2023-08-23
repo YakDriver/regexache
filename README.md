@@ -69,14 +69,14 @@ func main() {
 ## Tests
 
 Control (not using the cache).
-**Results** - Single VPC: 6.76GB, Two AppRunner: 17.89GB
+<br/>**Results** - Single VPC: 6.76GB, Two AppRunner: 17.89GB
 
 ```
 export REGEXACHE_OFF=1
 ```
 
 Clean cache every 1s for 0.1s. Expire entries after 0.5s. Protect entries from expiration after 10 uses.
-**Results** - Single VPC: 5.62GB (16.9% less), Two AppRunner: 15.01GB (16.1% less)
+<br/>**Results** - Single VPC: 5.62GB (16.9% less), Two AppRunner: 15.01GB (16.1% less)
 
 ```
 export REGEXACHE_MAINTENANCE_INTERVAL=1000
@@ -86,14 +86,14 @@ export REGEXACHE_CLEAN_TIME=100
 ```
 
 No expiration or cache cleaning.
-**Results** - Single VPC: 5.54GB (18.0% less), Two AppRunner: 14.81GB (17.2% less)
+<br/>**Results** - Single VPC: 5.54GB (18.0% less), Two AppRunner: 14.81GB (17.2% less)
 
 ```
 export REGEXACHE_MAINTENANCE_INTERVAL=0
 ```
 
 Clean cache every 2s for 0.1s. Expire entries after 2s. Protect entries from expiration after 3 uses.
-**Results** - Single VPC: 5.67GB (16.1% less), Two AppRunner: 15.05GB (15.9% less)
+<br/>**Results** - Single VPC: 5.67GB (16.1% less), Two AppRunner: 15.05GB (15.9% less)
 
 ```
 export REGEXACHE_MAINTENANCE_INTERVAL=2000
@@ -103,7 +103,7 @@ export REGEXACHE_CLEAN_TIME=100
 ```
 
 Clean cache every 2s for 0.1s. Expire entries after 2s. Protect entries from expiration after 3 uses.
-**Results** - Single VPC: 5.62GB (16.9% less), Two AppRunner: 15.00GB (16.2% less)
+<br/>**Results** - Single VPC: 5.62GB (16.9% less), Two AppRunner: 15.00GB (16.2% less)
 
 ```
 export REGEXACHE_MAINTENANCE_INTERVAL=5000
