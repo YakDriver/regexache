@@ -4,12 +4,9 @@ import (
 	"fmt"
 	"os"
 	"regexp"
-	"runtime"
 	"strconv"
 	"sync"
 	"time"
-
-	"golang.org/x/exp/slices"
 )
 
 const (
@@ -31,6 +28,7 @@ const (
 var (
 	mutex *sync.RWMutex
 	once  *sync.Once
+	filex *sync.RWMutex
 
 	caching             bool
 	maintainCache       bool
@@ -40,7 +38,6 @@ var (
 	cleanTime           time.Duration
 	outputMin           int64
 	outputFile          string
-	bobCentry           *centry
 )
 
 func init() {
@@ -99,12 +96,12 @@ func init() {
 	}
 
 	if v := os.Getenv(REGEXACHE_CACHE_OUTPUT); v != "" {
-		bobCentry = &centry{}
 		outputFile = v
 		go func() {
-			runtime.SetFinalizer(bobCentry, func(_ *centry) {
+			for {
+				time.Sleep(time.Second * 1)
 				outputCache()
-			})
+			}
 		}()
 	}
 
@@ -168,7 +165,6 @@ func MustCompile(str string) *regexp.Regexp {
 	}
 
 	mutex.Lock()
-	defer mutex.Unlock()
 
 	cache[str] = centry{
 		re:      regexp.MustCompile(str),
@@ -176,32 +172,30 @@ func MustCompile(str string) *regexp.Regexp {
 		lastUse: time.Now().UnixNano(),
 	}
 
+	mutex.Unlock()
 	return cache[str].re
 }
 
 func lookup(str string) *regexp.Regexp {
 	mutex.RLock()
-	defer mutex.RUnlock()
 
 	if v, ok := cache[str]; ok {
 		v.count++
 		v.lastUse = time.Now().UnixNano()
+
+		mutex.RUnlock()
 		return v.re
 	}
 
+	mutex.RUnlock()
 	return nil
 }
 
 func outputCache() {
-	var uses []int64
-	for _, v := range cache {
-		uses = append(uses, v.count)
-	}
+	filex.Lock()
+	defer filex.Unlock()
 
-	slices.Sort(uses)
-	slices.Reverse(uses)
-
-	f, err := os.Create(outputFile)
+	f, err := os.OpenFile(outputFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
 	if err != nil {
 		panic(err)
 	}
@@ -213,18 +207,13 @@ func outputCache() {
 		panic(err)
 	}
 
-	for _, v := range uses {
-		if v < outputMin {
+	for k, c := range cache {
+		if c.count < outputMin {
 			continue
 		}
-
-		for k, c := range cache {
-			if c.count == v {
-				_, err := f.WriteString(fmt.Sprintf("%s\t%d\n", k, v))
-				if err != nil {
-					panic(err)
-				}
-			}
+		_, err := f.WriteString(fmt.Sprintf("%s\t%d\n", k, c.count))
+		if err != nil {
+			panic(err)
 		}
 	}
 }
