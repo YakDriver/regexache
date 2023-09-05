@@ -74,43 +74,6 @@ Control (not using the cache).
 export REGEXACHE_OFF=1
 ```
 
-Clean cache every 1s for 0.1s. Expire entries after 0.5s. Protect entries from expiration after 10 uses.
-<br/>**Results** - Single VPC: 5.62GB (16.9% less), Two AppRunner: 15.01GB (16.1% less)
-
-```
-export REGEXACHE_MAINTENANCE_INTERVAL=1000
-export REGEXACHE_EXPIRATION=500
-export REGEXACHE_MINIMUM_USES=10
-export REGEXACHE_CLEAN_TIME=100
-```
-
-No expiration or cache cleaning.
-<br/>**Results** - Single VPC: 5.54GB (18.0% less), Two AppRunner: 14.81GB (17.2% less)
-
-```
-export REGEXACHE_MAINTENANCE_INTERVAL=0
-```
-
-Clean cache every 2s for 0.1s. Expire entries after 2s. Protect entries from expiration after 3 uses.
-<br/>**Results** - Single VPC: 5.67GB (16.1% less), Two AppRunner: 15.05GB (15.9% less)
-
-```
-export REGEXACHE_MAINTENANCE_INTERVAL=2000
-export REGEXACHE_EXPIRATION=2000
-export REGEXACHE_MINIMUM_USES=3
-export REGEXACHE_CLEAN_TIME=100
-```
-
-Clean cache every 2s for 0.1s. Expire entries after 2s. Protect entries from expiration after 3 uses.
-<br/>**Results** - Single VPC: 5.62GB (16.9% less), Two AppRunner: 15.00GB (16.2% less)
-
-```
-export REGEXACHE_MAINTENANCE_INTERVAL=5000
-export REGEXACHE_EXPIRATION=1000
-export REGEXACHE_MINIMUM_USES=2
-export REGEXACHE_CLEAN_TIME=500
-```
-
 Example of a running memory profile test of a single VPC acceptance test:
 
 ```
