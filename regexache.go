@@ -1,11 +1,15 @@
 package regexache
 
 import (
+	"fmt"
 	"os"
 	"regexp"
+	"runtime"
 	"strconv"
 	"sync"
 	"time"
+
+	"golang.org/x/exp/slices"
 )
 
 const (
@@ -13,12 +17,15 @@ const (
 	expirationDefault          = time.Millisecond * 10000
 	minimumUsesDefault         = int64(2)
 	cleanTimeDefault           = time.Millisecond * 1000
+	outputMinDefault           = 10
 
 	REGEXACHE_OFF                  = "REGEXACHE_OFF"
 	REGEXACHE_MAINTENANCE_INTERVAL = "REGEXACHE_MAINTENANCE_INTERVAL"
 	REGEXACHE_EXPIRATION           = "REGEXACHE_EXPIRATION"
 	REGEXACHE_MINIMUM_USES         = "REGEXACHE_MINIMUM_USES"
 	REGEXACHE_CLEAN_TIME           = "REGEXACHE_CLEAN_TIME"
+	REGEXACHE_CACHE_OUTPUT         = "REGEXACHE_CACHE_OUTPUT"
+	REGEXACHE_CACHE_OUTPUT_MIN     = "REGEXACHE_CACHE_OUTPUT_MIN"
 )
 
 var (
@@ -31,6 +38,7 @@ var (
 	expiration          time.Duration
 	minimumUses         int64
 	cleanTime           time.Duration
+	outputMin           int64
 )
 
 func init() {
@@ -86,6 +94,24 @@ func init() {
 		}
 
 		cleanTime = time.Millisecond * time.Duration(i)
+	}
+
+	if v := os.Getenv(REGEXACHE_CACHE_OUTPUT); v != "" {
+		go func() {
+			runtime.SetFinalizer(cache, func() {
+				outputCache()
+			})
+		}()
+	}
+
+	outputMin = outputMinDefault
+	if v := os.Getenv(REGEXACHE_CACHE_OUTPUT_MIN); v != "" {
+		i, err := strconv.Atoi(v)
+		if err != nil {
+			panic(err)
+		}
+
+		outputMin = int64(i)
 	}
 }
 
@@ -160,4 +186,26 @@ func lookup(str string) *regexp.Regexp {
 	}
 
 	return nil
+}
+
+func outputCache() {
+	var uses []int64
+	for _, v := range cache {
+		uses = append(uses, v.count)
+	}
+
+	slices.Sort(uses)
+	slices.Reverse(uses)
+
+	for _, v := range uses {
+		if v < outputMin {
+			continue
+		}
+
+		for k, c := range cache {
+			if c.count == v {
+				fmt.Printf("[%d]%s\n", v, k)
+			}
+		}
+	}
 }
