@@ -42,6 +42,7 @@ var (
 
 func init() {
 	mutex = &sync.RWMutex{}
+	filex = &sync.RWMutex{}
 	cache = make(map[string]centry)
 	once = &sync.Once{}
 
