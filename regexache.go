@@ -49,7 +49,7 @@ var (
 func init() {
 	mutex = &sync.RWMutex{}
 	filex = &sync.RWMutex{}
-	cache = make(map[string]centry)
+	//cache = make(map[string]centry)
 	once = &sync.Once{}
 
 	caching = true
@@ -139,8 +139,11 @@ type centry struct {
 	lastUse int64
 }
 
-var cache map[string]centry
+// var cache map[string]centry
+var cache sync.Map
+var lookups map[string]int
 
+/*
 func clean() {
 	mutex.Lock()
 	defer mutex.Unlock()
@@ -156,8 +159,9 @@ func clean() {
 		}
 	}
 }
+*/
 
-func maintain() {
+/*func maintain() {
 	if !maintainCache {
 		return
 	}
@@ -166,38 +170,50 @@ func maintain() {
 		time.Sleep(maintenanceInterval)
 		clean()
 	}
-}
+}*/
 
 func MustCompile(str string) *regexp.Regexp {
 	if !caching {
 		return regexp.MustCompile(str)
 	}
 
-	once.Do(func() {
-		go maintain()
-	})
+	//once.Do(func() {
+	//	go maintain()
+	//})
 
-	if v := lookup(str); v != nil {
-		return v
-	}
+	//if v := lookup(str); v != nil {
+	//	return v
+	//}
 
 	mutex.Lock()
+	if _, ok := lookups[str]; !ok {
+		lookups[str] = 0
+	}
+	lookups[str]++
+	mutex.Unlock()
 
-	cache[str] = centry{
+	re, ok := cache.Load(str)
+	if ok {
+		return re.(*regexp.Regexp)
+	}
+
+	re, _ = cache.LoadOrStore(str, regexp.MustCompile(str))
+	/*cache[str] = centry{
 		re:      regexp.MustCompile(str),
 		count:   1,
 		lastUse: time.Now().UnixNano(),
-	}
+	}*/
 
-	mutex.Unlock()
-	return cache[str].re
+	//mutex.Unlock()
+	return re.(*regexp.Regexp)
 }
 
-func lookup(str string) *regexp.Regexp {
+/*func lookup(str string) *regexp.Regexp {
 	mutex.RLock()
 
 	if v, ok := cache[str]; ok {
-		v.count++
+		cache[str].count
+		//cache[str].count = cache[str].count + 1
 		v.lastUse = time.Now().UnixNano()
 
 		mutex.RUnlock()
@@ -206,7 +222,7 @@ func lookup(str string) *regexp.Regexp {
 
 	mutex.RUnlock()
 	return nil
-}
+}*/
 
 func outputCache() {
 	filename := fmt.Sprintf("%s.%s", outputFile, strings.Replace(uuid.New().String(), "-", "", -1))
@@ -223,13 +239,27 @@ func outputCache() {
 		panic(err)
 	}
 
-	for k, c := range cache {
-		if c.count < outputMin {
-			continue
+	cache.Range(func(k any, _ any) bool {
+		v, ok := lookups[k.(string)]
+		if !ok {
+			v = 0
 		}
-		_, err := f.WriteString(fmt.Sprintf("%s\t%d\n", k, c.count))
+		_, err := f.WriteString(fmt.Sprintf("%s\t%d\n", k.(string), v))
 		if err != nil {
 			panic(err)
 		}
-	}
+		return true
+	})
+
+	/*
+		for k, c := range cache.Range() {
+			if c.count < outputMin {
+				continue
+			}
+			_, err := f.WriteString(fmt.Sprintf("%s\t%d\n", k, c.count))
+			if err != nil {
+				panic(err)
+			}
+		}
+	*/
 }
