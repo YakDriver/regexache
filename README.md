@@ -61,10 +61,6 @@ func main() {
 | Env Var | Description |
 | --- | --- |
 | REGEXACHE_OFF | Any value will turn `regexache` completely off. Useful for testing with and without caching. When off, `regexache.MustCompile()` is equivalent to `regexp.MustCompile()`. By default, `regexache` caches entries. |
-| REGEXACHE_MAINTENANCE_INTERVAL | Milliseconds between cache maintenance cycles. A value of `0` means that the cache will not be maintained--no entries will be removed. Default: 0 (entries won't be removed). |
-| REGEXACHE_EXPIRATION | Milliseconds until an entry expires and `regexache` can remove it from the cache. If and when an entry is removed also depends on `REGEXACHE_MAINTENANCE_INTERVAL` and `REGEXACHE_MINIMUM_USES`. Default: 10000 (10 seconds). |
-| REGEXACHE_MINIMUM_USES | If you look up an entry more than this number of times, `regexache` will not remove it from the cache regardless of `REGEXACHE_EXPIRATION`. A value of `0` means that the number of times you lookup an entry is disregarded and `regexache` will remove the entry for expiration. |
-| REGEXACHE_CLEAN_TIME | Milliseconds to spend cleaning the cache each maintenance cycle. The cache is locked during cleaning so longer times may reduce performance. Default: 1000 (1 second). |
 | REGEXACHE_OUTPUT | File to output the cache contents to. Default: Empty (Don't output cache). |
 | REGEXACHE_OUTPUT_MIN | Minimum number of lookups entries need to include when listing cache entries. Default: 1. |
 | REGEXACHE_OUTPUT_INTERVAL | If outputing the cache, output every X milliseconds. Default: 1000 (1 second).  |
@@ -76,43 +72,6 @@ Control (not using the cache).
 
 ```
 export REGEXACHE_OFF=1
-```
-
-Clean cache every 1s for 0.1s. Expire entries after 0.5s. Protect entries from expiration after 10 uses.
-<br/>**Results** - Single VPC: 5.62GB (16.9% less), Two AppRunner: 15.01GB (16.1% less)
-
-```
-export REGEXACHE_MAINTENANCE_INTERVAL=1000
-export REGEXACHE_EXPIRATION=500
-export REGEXACHE_MINIMUM_USES=10
-export REGEXACHE_CLEAN_TIME=100
-```
-
-No expiration or cache cleaning.
-<br/>**Results** - Single VPC: 5.54GB (18.0% less), Two AppRunner: 14.81GB (17.2% less)
-
-```
-export REGEXACHE_MAINTENANCE_INTERVAL=0
-```
-
-Clean cache every 2s for 0.1s. Expire entries after 2s. Protect entries from expiration after 3 uses.
-<br/>**Results** - Single VPC: 5.67GB (16.1% less), Two AppRunner: 15.05GB (15.9% less)
-
-```
-export REGEXACHE_MAINTENANCE_INTERVAL=2000
-export REGEXACHE_EXPIRATION=2000
-export REGEXACHE_MINIMUM_USES=3
-export REGEXACHE_CLEAN_TIME=100
-```
-
-Clean cache every 2s for 0.1s. Expire entries after 2s. Protect entries from expiration after 3 uses.
-<br/>**Results** - Single VPC: 5.62GB (16.9% less), Two AppRunner: 15.00GB (16.2% less)
-
-```
-export REGEXACHE_MAINTENANCE_INTERVAL=5000
-export REGEXACHE_EXPIRATION=1000
-export REGEXACHE_MINIMUM_USES=2
-export REGEXACHE_CLEAN_TIME=500
 ```
 
 Example of a running memory profile test of a single VPC acceptance test:
