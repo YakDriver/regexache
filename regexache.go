@@ -98,7 +98,7 @@ func init() {
 
 	if v := os.Getenv(REGEXACHE_CACHE_OUTPUT); v != "" {
 		go func() {
-			runtime.SetFinalizer(cache, func() {
+			runtime.SetFinalizer(&cache, func() {
 				outputCache()
 			})
 		}()
