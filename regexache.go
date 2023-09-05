@@ -1,6 +1,7 @@
 package regexache
 
 import (
+	_ "embed"
 	"fmt"
 	"os"
 	"regexp"
@@ -20,86 +21,32 @@ const (
 	outputMinDefault           = 1
 	outputIntervalDefault      = time.Millisecond * 1000
 
-	REGEXACHE_OFF                  = "REGEXACHE_OFF"
-	REGEXACHE_MAINTENANCE_INTERVAL = "REGEXACHE_MAINTENANCE_INTERVAL"
-	REGEXACHE_EXPIRATION           = "REGEXACHE_EXPIRATION"
-	REGEXACHE_MINIMUM_USES         = "REGEXACHE_MINIMUM_USES"
-	REGEXACHE_CLEAN_TIME           = "REGEXACHE_CLEAN_TIME"
-	REGEXACHE_OUTPUT               = "REGEXACHE_OUTPUT"
-	REGEXACHE_OUTPUT_INTERVAL      = "REGEXACHE_OUTPUT_INTERVAL"
-	REGEXACHE_OUTPUT_MIN           = "REGEXACHE_OUTPUT_MIN"
+	REGEXACHE_OFF             = "REGEXACHE_OFF"
+	REGEXACHE_OUTPUT          = "REGEXACHE_OUTPUT"
+	REGEXACHE_OUTPUT_INTERVAL = "REGEXACHE_OUTPUT_INTERVAL"
+	REGEXACHE_OUTPUT_MIN      = "REGEXACHE_OUTPUT_MIN"
+	REGEXACHE_PRELOAD_OFF     = "REGEXACHE_PRELOAD_OFF"
 )
+
+//go:embed preload.txt
+var preload string
 
 var (
 	mutex *sync.RWMutex
-	once  *sync.Once
-	filex *sync.RWMutex
 
-	caching             bool
-	maintainCache       bool
-	maintenanceInterval time.Duration
-	expiration          time.Duration
-	minimumUses         int64
-	cleanTime           time.Duration
-	outputMin           int64
-	outputFile          string
-	outputInterval      time.Duration
+	caching        bool
+	outputMin      int64
+	outputFile     string
+	outputInterval time.Duration
 )
 
 func init() {
 	mutex = &sync.RWMutex{}
-	filex = &sync.RWMutex{}
-	//cache = make(map[string]centry)
-	once = &sync.Once{}
+	lookups = make(map[string]int)
 
 	caching = true
 	if v := os.Getenv(REGEXACHE_OFF); v != "" {
 		caching = false
-	}
-
-	maintainCache = true
-	maintenanceInterval = maintenanceIntervalDefault
-	if v := os.Getenv(REGEXACHE_MAINTENANCE_INTERVAL); v != "" {
-		i, err := strconv.Atoi(v)
-		if err != nil {
-			panic(err)
-		}
-
-		if i < 1 {
-			maintainCache = false
-		} else {
-			maintenanceInterval = time.Millisecond * time.Duration(i)
-		}
-	}
-
-	expiration = expirationDefault
-	if v := os.Getenv(REGEXACHE_EXPIRATION); v != "" {
-		i, err := strconv.Atoi(v)
-		if err != nil {
-			panic(err)
-		}
-
-		expiration = time.Millisecond * time.Duration(i)
-	}
-
-	minimumUses = minimumUsesDefault
-	if v := os.Getenv(REGEXACHE_MINIMUM_USES); v != "" {
-		i, err := strconv.Atoi(v)
-		if err != nil {
-			panic(err)
-		}
-
-		minimumUses = int64(i)
-	}
-
-	cleanTime = cleanTimeDefault
-	if v := os.Getenv(REGEXACHE_CLEAN_TIME); v != "" {
-		i, err := strconv.Atoi(v)
-		if err != nil {
-			panic(err)
-		}
-
-		cleanTime = time.Millisecond * time.Duration(i)
 	}
 
 	outputInterval = outputIntervalDefault
@@ -122,7 +69,7 @@ func init() {
 		outputMin = int64(i)
 	}
 
-	if v := os.Getenv(REGEXACHE_OUTPUT); v != "" {
+	if v := os.Getenv(REGEXACHE_OUTPUT); v != "" && caching {
 		outputFile = v
 		go func() {
 			for {
@@ -131,66 +78,35 @@ func init() {
 			}
 		}()
 	}
+
+	if v := os.Getenv(REGEXACHE_PRELOAD_OFF); v == "" && caching {
+		preRE := strings.Split(preload, "\n")
+		for _, r := range preRE {
+			if r == "" {
+				continue
+			}
+
+			cache.Store(r, regexp.MustCompile(r))
+		}
+	}
 }
 
-type centry struct {
-	re      *regexp.Regexp
-	count   int64
-	lastUse int64
-}
-
-// var cache map[string]centry
 var cache sync.Map
 var lookups map[string]int
-
-/*
-func clean() {
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	endCleanTime := time.Now().Add(cleanTime)
-	for k, v := range cache {
-		if (v.count < minimumUses || minimumUses == 0) && (time.Now().UnixNano()-v.lastUse) > int64(expiration) {
-			delete(cache, k)
-		}
-
-		if time.Now().After(endCleanTime) {
-			break
-		}
-	}
-}
-*/
-
-/*func maintain() {
-	if !maintainCache {
-		return
-	}
-
-	for {
-		time.Sleep(maintenanceInterval)
-		clean()
-	}
-}*/
 
 func MustCompile(str string) *regexp.Regexp {
 	if !caching {
 		return regexp.MustCompile(str)
 	}
 
-	//once.Do(func() {
-	//	go maintain()
-	//})
-
-	//if v := lookup(str); v != nil {
-	//	return v
-	//}
-
-	mutex.Lock()
-	if _, ok := lookups[str]; !ok {
-		lookups[str] = 0
+	if outputFile != "" {
+		mutex.Lock()
+		if _, ok := lookups[str]; !ok {
+			lookups[str] = 0
+		}
+		lookups[str]++
+		mutex.Unlock()
 	}
-	lookups[str]++
-	mutex.Unlock()
 
 	re, ok := cache.Load(str)
 	if ok {
@@ -198,31 +114,8 @@ func MustCompile(str string) *regexp.Regexp {
 	}
 
 	re, _ = cache.LoadOrStore(str, regexp.MustCompile(str))
-	/*cache[str] = centry{
-		re:      regexp.MustCompile(str),
-		count:   1,
-		lastUse: time.Now().UnixNano(),
-	}*/
-
-	//mutex.Unlock()
 	return re.(*regexp.Regexp)
 }
-
-/*func lookup(str string) *regexp.Regexp {
-	mutex.RLock()
-
-	if v, ok := cache[str]; ok {
-		cache[str].count
-		//cache[str].count = cache[str].count + 1
-		v.lastUse = time.Now().UnixNano()
-
-		mutex.RUnlock()
-		return v.re
-	}
-
-	mutex.RUnlock()
-	return nil
-}*/
 
 func outputCache() {
 	filename := fmt.Sprintf("%s.%s", outputFile, strings.Replace(uuid.New().String(), "-", "", -1))
@@ -240,26 +133,21 @@ func outputCache() {
 	}
 
 	cache.Range(func(k any, _ any) bool {
+		mutex.RLock()
 		v, ok := lookups[k.(string)]
 		if !ok {
 			v = 0
 		}
+		mutex.RUnlock()
+
+		if v < int(outputMin) {
+			return true
+		}
+
 		_, err := f.WriteString(fmt.Sprintf("%s\t%d\n", k.(string), v))
 		if err != nil {
 			panic(err)
 		}
 		return true
 	})
-
-	/*
-		for k, c := range cache.Range() {
-			if c.count < outputMin {
-				continue
-			}
-			_, err := f.WriteString(fmt.Sprintf("%s\t%d\n", k, c.count))
-			if err != nil {
-				panic(err)
-			}
-		}
-	*/
 }
