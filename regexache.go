@@ -5,10 +5,11 @@ import (
 	"os"
 	"regexp"
 	"runtime"
-	"slices"
 	"strconv"
 	"sync"
 	"time"
+
+	"golang.org/x/exp/slices"
 )
 
 const (
