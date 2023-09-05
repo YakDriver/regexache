@@ -14,15 +14,17 @@ const (
 	expirationDefault          = time.Millisecond * 10000
 	minimumUsesDefault         = int64(2)
 	cleanTimeDefault           = time.Millisecond * 1000
-	outputMinDefault           = 10
+	outputMinDefault           = 1
+	outputIntervalDefault      = time.Millisecond * 1000
 
 	REGEXACHE_OFF                  = "REGEXACHE_OFF"
 	REGEXACHE_MAINTENANCE_INTERVAL = "REGEXACHE_MAINTENANCE_INTERVAL"
 	REGEXACHE_EXPIRATION           = "REGEXACHE_EXPIRATION"
 	REGEXACHE_MINIMUM_USES         = "REGEXACHE_MINIMUM_USES"
 	REGEXACHE_CLEAN_TIME           = "REGEXACHE_CLEAN_TIME"
-	REGEXACHE_CACHE_OUTPUT         = "REGEXACHE_CACHE_OUTPUT"
-	REGEXACHE_CACHE_OUTPUT_MIN     = "REGEXACHE_CACHE_OUTPUT_MIN"
+	REGEXACHE_OUTPUT               = "REGEXACHE_OUTPUT"
+	REGEXACHE_OUTPUT_INTERVAL      = "REGEXACHE_OUTPUT_INTERVAL"
+	REGEXACHE_OUTPUT_MIN           = "REGEXACHE_OUTPUT_MIN"
 )
 
 var (
@@ -38,6 +40,7 @@ var (
 	cleanTime           time.Duration
 	outputMin           int64
 	outputFile          string
+	outputInterval      time.Duration
 )
 
 func init() {
@@ -96,24 +99,34 @@ func init() {
 		cleanTime = time.Millisecond * time.Duration(i)
 	}
 
-	if v := os.Getenv(REGEXACHE_CACHE_OUTPUT); v != "" {
-		outputFile = v
-		go func() {
-			for {
-				time.Sleep(time.Second * 1)
-				outputCache()
-			}
-		}()
+	outputInterval = outputIntervalDefault
+	if v := os.Getenv(REGEXACHE_OUTPUT_INTERVAL); v != "" {
+		i, err := strconv.Atoi(v)
+		if err != nil {
+			panic(err)
+		}
+
+		outputInterval = time.Millisecond * time.Duration(i)
 	}
 
 	outputMin = outputMinDefault
-	if v := os.Getenv(REGEXACHE_CACHE_OUTPUT_MIN); v != "" {
+	if v := os.Getenv(REGEXACHE_OUTPUT_MIN); v != "" {
 		i, err := strconv.Atoi(v)
 		if err != nil {
 			panic(err)
 		}
 
 		outputMin = int64(i)
+	}
+
+	if v := os.Getenv(REGEXACHE_OUTPUT); v != "" {
+		outputFile = v
+		go func() {
+			for {
+				time.Sleep(outputInterval)
+				outputCache()
+			}
+		}()
 	}
 }
 
