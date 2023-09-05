@@ -14,7 +14,7 @@ const (
 	expirationDefault          = time.Millisecond * 10000
 	minimumUsesDefault         = int64(2)
 	cleanTimeDefault           = time.Millisecond * 1000
-	outputMinDefault           = 10
+	outputMinDefault           = 1
 	outputIntervalDefault      = time.Millisecond * 1000
 
 	REGEXACHE_OFF                  = "REGEXACHE_OFF"
