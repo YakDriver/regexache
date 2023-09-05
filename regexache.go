@@ -39,6 +39,7 @@ var (
 	minimumUses         int64
 	cleanTime           time.Duration
 	outputMin           int64
+	outputFile          string
 )
 
 func init() {
@@ -97,6 +98,7 @@ func init() {
 	}
 
 	if v := os.Getenv(REGEXACHE_CACHE_OUTPUT); v != "" {
+		outputFile = v
 		go func() {
 			runtime.SetFinalizer(&cache, func() {
 				outputCache()
@@ -197,6 +199,18 @@ func outputCache() {
 	slices.Sort(uses)
 	slices.Reverse(uses)
 
+	f, err := os.Create(outputFile)
+	if err != nil {
+		panic(err)
+	}
+
+	defer f.Close()
+
+	_, err = f.WriteString("regex\tcount\n")
+	if err != nil {
+		panic(err)
+	}
+
 	for _, v := range uses {
 		if v < outputMin {
 			continue
@@ -204,7 +218,10 @@ func outputCache() {
 
 		for k, c := range cache {
 			if c.count == v {
-				fmt.Printf("[%d]%s\n", v, k)
+				_, err := f.WriteString(fmt.Sprintf("%s\t%d\n", k, v))
+				if err != nil {
+					panic(err)
+				}
 			}
 		}
 	}
