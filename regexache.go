@@ -40,6 +40,7 @@ var (
 	cleanTime           time.Duration
 	outputMin           int64
 	outputFile          string
+	bobCentry           *centry
 )
 
 func init() {
@@ -98,9 +99,10 @@ func init() {
 	}
 
 	if v := os.Getenv(REGEXACHE_CACHE_OUTPUT); v != "" {
+		bobCentry = &centry{}
 		outputFile = v
 		go func() {
-			runtime.SetFinalizer(&cache, func() {
+			runtime.SetFinalizer(bobCentry, func(_ *centry) {
 				outputCache()
 			})
 		}()
