@@ -14,18 +14,15 @@ import (
 )
 
 const (
-	maintenanceIntervalDefault = time.Duration(0)
-	expirationDefault          = time.Millisecond * 10000
-	minimumUsesDefault         = int64(2)
-	cleanTimeDefault           = time.Millisecond * 1000
-	outputMinDefault           = 1
-	outputIntervalDefault      = time.Millisecond * 1000
+	outputMinDefault      = 1
+	outputIntervalDefault = time.Millisecond * 1000
 
 	REGEXACHE_OFF             = "REGEXACHE_OFF"
 	REGEXACHE_OUTPUT          = "REGEXACHE_OUTPUT"
 	REGEXACHE_OUTPUT_INTERVAL = "REGEXACHE_OUTPUT_INTERVAL"
 	REGEXACHE_OUTPUT_MIN      = "REGEXACHE_OUTPUT_MIN"
 	REGEXACHE_PRELOAD_OFF     = "REGEXACHE_PRELOAD_OFF"
+	REGEXACHE_STANDARDIZE_OFF = "REGEXACHE_STANDARDIZE_OFF"
 )
 
 //go:embed preload.txt
@@ -38,6 +35,7 @@ var (
 	outputMin      int64
 	outputFile     string
 	outputInterval time.Duration
+	standardizing  bool
 )
 
 func init() {
@@ -89,6 +87,11 @@ func init() {
 			cache.Store(r, regexp.MustCompile(r))
 		}
 	}
+
+	standardizing = true
+	if v := os.Getenv(REGEXACHE_STANDARDIZE_OFF); v != "" {
+		standardizing = false
+	}
 }
 
 var cache sync.Map
@@ -97,6 +100,10 @@ var lookups map[string]int
 func MustCompile(str string) *regexp.Regexp {
 	if !caching {
 		return regexp.MustCompile(str)
+	}
+
+	if standardizing {
+		str = standardize(str)
 	}
 
 	if outputFile != "" {
