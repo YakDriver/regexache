@@ -75,6 +75,11 @@ func TestStandardize(t *testing.T) {
 			Input:    `^[0-9a-zA-Z._-]+`,
 			Expected: `^[\w.-]+`,
 		},
+		{
+			TestName: "badEscaping",
+			Input:    `[0-9a-zA-Z.\_\-]+$`,
+			Expected: `[\w.\-]+$`,
+		},
 	}
 
 	for _, testCase := range testCases {
