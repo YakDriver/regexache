@@ -1,6 +1,8 @@
 package regexache
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestStandardize(t *testing.T) {
 	t.Parallel()
