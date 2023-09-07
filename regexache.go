@@ -22,7 +22,7 @@ const (
 	REGEXACHE_OUTPUT_INTERVAL = "REGEXACHE_OUTPUT_INTERVAL"
 	REGEXACHE_OUTPUT_MIN      = "REGEXACHE_OUTPUT_MIN"
 	REGEXACHE_PRELOAD_OFF     = "REGEXACHE_PRELOAD_OFF"
-	REGEXACHE_STANDARDIZE_OFF = "REGEXACHE_STANDARDIZE_OFF"
+	REGEXACHE_STANDARDIZE     = "REGEXACHE_STANDARDIZE"
 )
 
 //go:embed preload.txt
@@ -88,9 +88,9 @@ func init() {
 		}
 	}
 
-	standardizing = true
-	if v := os.Getenv(REGEXACHE_STANDARDIZE_OFF); v != "" {
-		standardizing = false
+	standardizing = false
+	if v := os.Getenv(REGEXACHE_STANDARDIZE); v != "" {
+		standardizing = true
 	}
 }
 
