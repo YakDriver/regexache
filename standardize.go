@@ -1,6 +1,9 @@
 package regexache
 
-import "regexp"
+import (
+	"regexp"
+	"strings"
+)
 
 var (
 	numFront *regexp.Regexp
@@ -19,6 +22,7 @@ func init() {
 }
 
 func standardize(expr string) string {
+	expr = strings.ReplaceAll(expr, `\_`, "_")
 	expr = undFront.ReplaceAllString(expr, "$1$3$2$4$5")
 	expr = lowFront.ReplaceAllString(expr, "$1$3$2$4$5")
 	expr = capFront.ReplaceAllString(expr, "$1$3$2$4$5")
