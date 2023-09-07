@@ -1,7 +1,6 @@
 package regexache
 
 import (
-	"os"
 	"regexp"
 	"strings"
 )
@@ -15,13 +14,11 @@ var (
 )
 
 func init() {
-	if v := os.Getenv(REGEXACHE_STANDARDIZE); v != "" {
-		undFront = regexp.MustCompile(`(\[)([^\]]*)(_)([^\]]*)(\])`)
-		lowFront = regexp.MustCompile(`(\[)([^\]]*)(a-[b-z])([^\]]*)(\])`)
-		capFront = regexp.MustCompile(`(\[)([^\]]*)(A-[B-Z])([^\]]*)(\])`)
-		numFront = regexp.MustCompile(`(\[)([^\]]*)(0-9)([^\]]*)(\])`)
-		word = regexp.MustCompile(`(\[)([^\]]*)(0-9A-Za-z_)([^\]]*)(\])`)
-	}
+	undFront = regexp.MustCompile(`(\[)([^\]]*)(_)([^\]]*)(\])`)
+	lowFront = regexp.MustCompile(`(\[)([^\]]*)(a-[b-z])([^\]]*)(\])`)
+	capFront = regexp.MustCompile(`(\[)([^\]]*)(A-[B-Z])([^\]]*)(\])`)
+	numFront = regexp.MustCompile(`(\[)([^\]]*)(0-9)([^\]]*)(\])`)
+	word = regexp.MustCompile(`(\[)([^\]]*)(0-9A-Za-z_)([^\]]*)(\])`)
 }
 
 func standardize(expr string) string {
