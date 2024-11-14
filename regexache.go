@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	lru "github.com/hashicorp/golang-lru"
 )
 
 const (
@@ -29,8 +30,9 @@ const (
 var preload string
 
 var (
-	mutex *sync.RWMutex
-
+	cache          *lru.Cache
+	lookups        map[string]int
+	lookupsLock    sync.RWMutex
 	caching        bool
 	outputMin      int64
 	outputFile     string
@@ -39,8 +41,11 @@ var (
 )
 
 func init() {
-	mutex = &sync.RWMutex{}
-	lookups = make(map[string]int)
+	var err error
+	cache, err = lru.New(1000)
+	if err != nil {
+		panic(err)
+	}
 
 	caching = true
 	if v := os.Getenv(REGEXACHE_OFF); v != "" {
@@ -84,7 +89,7 @@ func init() {
 				continue
 			}
 
-			cache.Store(r, regexp.MustCompile(r))
+			cache.Add(r, regexp.MustCompile(r))
 		}
 	}
 
@@ -93,9 +98,6 @@ func init() {
 		standardizing = true
 	}
 }
-
-var cache sync.Map
-var lookups map[string]int
 
 func MustCompile(str string) *regexp.Regexp {
 	if !caching {
@@ -107,21 +109,24 @@ func MustCompile(str string) *regexp.Regexp {
 	}
 
 	if outputFile != "" {
-		mutex.Lock()
+		lookupsLock.Lock()
+		if lookups == nil {
+			lookups = make(map[string]int)
+		}
 		if _, ok := lookups[str]; !ok {
 			lookups[str] = 0
 		}
 		lookups[str]++
-		mutex.Unlock()
+		lookupsLock.Unlock()
 	}
 
-	re, ok := cache.Load(str)
-	if ok {
+	if re, ok := cache.Get(str); ok {
 		return re.(*regexp.Regexp)
 	}
 
-	re, _ = cache.LoadOrStore(str, regexp.MustCompile(str))
-	return re.(*regexp.Regexp)
+	re := regexp.MustCompile(str)
+	cache.Add(str, re)
+	return re
 }
 
 func outputCache() {
@@ -139,22 +144,22 @@ func outputCache() {
 		panic(err)
 	}
 
-	cache.Range(func(k any, _ any) bool {
-		mutex.RLock()
+	cacheKeys := cache.Keys()
+	for _, k := range cacheKeys {
+		lookupsLock.RLock()
 		v, ok := lookups[k.(string)]
 		if !ok {
 			v = 0
 		}
-		mutex.RUnlock()
+		lookupsLock.RUnlock()
 
 		if v < int(outputMin) {
-			return true
+			continue
 		}
 
 		_, err := f.WriteString(fmt.Sprintf("%s\t%d\n", k.(string), v))
 		if err != nil {
 			panic(err)
 		}
-		return true
-	})
+	}
 }
