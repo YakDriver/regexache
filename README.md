@@ -60,7 +60,7 @@ func main() {
 
 | Env Var | Description |
 | --- | --- |
-| REGEXACHE_OFF | Any value will turn `regexache` completely off. Useful for testing with and without caching. When off, `regexache.MustCompile()` is equivalent to `regexp.MustCompile()`. By default, `regexache` caches entries. |
+| REGEXACHE_OFF | Any value will turn `regexache` completely off. All other environment variables are ignored. Useful for testing with and without caching. When off, `regexache.MustCompile()` is equivalent to `regexp.MustCompile()`. By default, `regexache` caches entries. |
 | REGEXACHE_OUTPUT | File to output the cache contents to. Default: Empty (Don't output cache). |
 | REGEXACHE_OUTPUT_MIN | Minimum number of lookups entries need to include when listing cache entries. Default: 1. |
 | REGEXACHE_OUTPUT_INTERVAL | If outputing the cache, output every X milliseconds. Default: 1000 (1 second). |
