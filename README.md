@@ -65,6 +65,7 @@ func main() {
 | REGEXACHE_OUTPUT_MIN | Minimum number of lookups entries need to include when listing cache entries. Default: 1. |
 | REGEXACHE_OUTPUT_INTERVAL | If outputing the cache, output every X milliseconds. Default: 1000 (1 second). |
 | REGEXACHE_STANDARDIZE| Standardize expressions before caching. Default: Empty (Don't standardize). |
+| REGEXACHE_LRU_SIZE | LRU cache size. Default: 1000 |
 
 ## Tests
 

@@ -17,6 +17,7 @@ import (
 const (
 	outputMinDefault      = 1
 	outputIntervalDefault = time.Millisecond * 1000
+	lruSizeDefault        = 1000
 
 	REGEXACHE_OFF             = "REGEXACHE_OFF"
 	REGEXACHE_OUTPUT          = "REGEXACHE_OUTPUT"
@@ -24,6 +25,7 @@ const (
 	REGEXACHE_OUTPUT_MIN      = "REGEXACHE_OUTPUT_MIN"
 	REGEXACHE_PRELOAD_OFF     = "REGEXACHE_PRELOAD_OFF"
 	REGEXACHE_STANDARDIZE     = "REGEXACHE_STANDARDIZE"
+	REGEXACHE_LRU_SIZE        = "REGEXACHE_LRU_SIZE"
 )
 
 //go:embed preload.txt
@@ -41,15 +43,26 @@ var (
 )
 
 func init() {
-	var err error
-	cache, err = lru.New(1000)
-	if err != nil {
-		panic(err)
-	}
-
 	caching = true
 	if v := os.Getenv(REGEXACHE_OFF); v != "" {
 		caching = false
+		return
+	}
+
+	lruSize := lruSizeDefault
+	if v := os.Getenv(REGEXACHE_LRU_SIZE); v != "" {
+		ls, err := strconv.Atoi(v)
+		if err != nil {
+			panic(err)
+		}
+
+		lruSize = ls
+	}
+
+	var err error
+	cache, err = lru.New(lruSize)
+	if err != nil {
+		panic(err)
 	}
 
 	outputInterval = outputIntervalDefault
