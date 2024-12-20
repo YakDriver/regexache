@@ -25,7 +25,6 @@ func TestMustCompile_CacheComplexPattern(t *testing.T) {
 }
 
 func BenchmarkMustCompile(b *testing.B) {
-	// Define patterns for consistency
 	literalPattern := "abc"
 	alphaNumericPattern := `^[a-zA-Z0-9_]+$`
 	ipPattern := `^(\d{1,3}\.){3}\d{1,3}$`
@@ -33,7 +32,7 @@ func BenchmarkMustCompile(b *testing.B) {
 	colorCodePattern := `^#([a-fA-F0-9]{6}|[a-fA-F0-9]{3})$`
 	phoneNumberPattern := `(\d{3}-\d{2}-\d{4})|($begin:math:text$\\d{3}$end:math:text$\s\d{3}-\d{4})`
 
-	// Benchmark for literal pattern
+	// Literal pattern
 	b.Run("CachingDisabled_LiteralPattern", func(b *testing.B) {
 		caching = false
 		for i := 0; i < b.N; i++ {
@@ -51,7 +50,7 @@ func BenchmarkMustCompile(b *testing.B) {
 		}
 	})
 
-	// Benchmark for alphanumeric pattern
+	// Alphanumeric pattern
 	b.Run("CachingDisabled_AlphaNumericPattern", func(b *testing.B) {
 		caching = false
 		for i := 0; i < b.N; i++ {
@@ -69,7 +68,7 @@ func BenchmarkMustCompile(b *testing.B) {
 		}
 	})
 
-	// Benchmark for IP pattern
+	// IP pattern
 	b.Run("CachingDisabled_IPPattern", func(b *testing.B) {
 		caching = false
 		for i := 0; i < b.N; i++ {
@@ -87,7 +86,7 @@ func BenchmarkMustCompile(b *testing.B) {
 		}
 	})
 
-	// Benchmark for date pattern
+	// Date pattern
 	b.Run("CachingDisabled_DatePattern", func(b *testing.B) {
 		caching = false
 		for i := 0; i < b.N; i++ {
@@ -105,7 +104,7 @@ func BenchmarkMustCompile(b *testing.B) {
 		}
 	})
 
-	// Benchmark for color code pattern
+	// Color code pattern
 	b.Run("CachingDisabled_ColorCodePattern", func(b *testing.B) {
 		caching = false
 		for i := 0; i < b.N; i++ {
@@ -123,7 +122,7 @@ func BenchmarkMustCompile(b *testing.B) {
 		}
 	})
 
-	// Benchmark for phone number pattern
+	// Phone number pattern
 	b.Run("CachingDisabled_PhoneNumberPattern", func(b *testing.B) {
 		caching = false
 		for i := 0; i < b.N; i++ {
