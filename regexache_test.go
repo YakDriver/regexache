@@ -1,0 +1,141 @@
+package regexache
+
+import (
+	"testing"
+)
+
+func TestMustCompile_CacheBasicPattern(t *testing.T) {
+	regex1 := MustCompile("abc")
+	regex2 := MustCompile("abc")
+
+	if regex1 != regex2 {
+		t.Errorf("Expected cached regex instances to be the same, but got different instances")
+	}
+}
+
+func TestMustCompile_CacheComplexPattern(t *testing.T) {
+	p := `(\d{3}-\d{2}-\d{4})|($begin:math:text$\\d{3}$end:math:text$\s\d{3}-\d{4})` // US phone numbers (basic format)
+	regex1 := MustCompile(p)
+	regex2 := MustCompile(p)
+
+	if regex1 != regex2 {
+		t.Errorf("Expected cached regex instances to be the same for pattern: %s", p)
+	}
+}
+
+func BenchmarkMustCompile(b *testing.B) {
+	literalPattern := "abc"
+	alphaNumericPattern := `^[a-zA-Z0-9_]+$`
+	ipPattern := `^(\d{1,3}\.){3}\d{1,3}$`
+	datePattern := `^\d{4}-\d{2}-\d{2}$`
+	colorCodePattern := `^#([a-fA-F0-9]{6}|[a-fA-F0-9]{3})$`
+	phoneNumberPattern := `(\d{3}-\d{2}-\d{4})|($begin:math:text$\\d{3}$end:math:text$\s\d{3}-\d{4})`
+
+	// Literal pattern
+	b.Run("CachingDisabled_LiteralPattern", func(b *testing.B) {
+		caching = false
+		for i := 0; i < b.N; i++ {
+			MustCompile(literalPattern)
+		}
+	})
+
+	b.Run("CachingEnabled_LiteralPattern", func(b *testing.B) {
+		caching = true
+		MustCompile(literalPattern) // preload the cache
+
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			MustCompile(literalPattern)
+		}
+	})
+
+	// Alphanumeric pattern
+	b.Run("CachingDisabled_AlphaNumericPattern", func(b *testing.B) {
+		caching = false
+		for i := 0; i < b.N; i++ {
+			MustCompile(alphaNumericPattern)
+		}
+	})
+
+	b.Run("CachingEnabled_AlphaNumericPattern", func(b *testing.B) {
+		caching = true
+		MustCompile(alphaNumericPattern) // preload the cache
+
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			MustCompile(alphaNumericPattern)
+		}
+	})
+
+	// IP pattern
+	b.Run("CachingDisabled_IPPattern", func(b *testing.B) {
+		caching = false
+		for i := 0; i < b.N; i++ {
+			MustCompile(ipPattern)
+		}
+	})
+
+	b.Run("CachingEnabled_IPPattern", func(b *testing.B) {
+		caching = true
+		MustCompile(ipPattern) // preload the cache
+
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			MustCompile(ipPattern)
+		}
+	})
+
+	// Date pattern
+	b.Run("CachingDisabled_DatePattern", func(b *testing.B) {
+		caching = false
+		for i := 0; i < b.N; i++ {
+			MustCompile(datePattern)
+		}
+	})
+
+	b.Run("CachingEnabled_DatePattern", func(b *testing.B) {
+		caching = true
+		MustCompile(datePattern) // preload the cache
+
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			MustCompile(datePattern)
+		}
+	})
+
+	// Color code pattern
+	b.Run("CachingDisabled_ColorCodePattern", func(b *testing.B) {
+		caching = false
+		for i := 0; i < b.N; i++ {
+			MustCompile(colorCodePattern)
+		}
+	})
+
+	b.Run("CachingEnabled_ColorCodePattern", func(b *testing.B) {
+		caching = true
+		MustCompile(colorCodePattern) // preload the cache
+
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			MustCompile(colorCodePattern)
+		}
+	})
+
+	// Phone number pattern
+	b.Run("CachingDisabled_PhoneNumberPattern", func(b *testing.B) {
+		caching = false
+		for i := 0; i < b.N; i++ {
+			MustCompile(phoneNumberPattern)
+		}
+	})
+
+	b.Run("CachingEnabled_PhoneNumberPattern", func(b *testing.B) {
+		caching = true
+		MustCompile(phoneNumberPattern) // preload the cache
+
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			MustCompile(phoneNumberPattern)
+		}
+	})
+}

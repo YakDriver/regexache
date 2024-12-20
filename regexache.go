@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// nolint
 const (
 	outputMinDefault      = 1
 	outputIntervalDefault = time.Millisecond * 1000
