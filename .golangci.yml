@@ -1,0 +1,19 @@
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  enable:
+    - govet
+    - gofmt
+    - gocyclo
+    - errcheck
+    - gosimple
+    - staticcheck
+    - unused
+    - lll
+    - stylecheck
+    - misspell
+    - prealloc
+    - typecheck
+    - revive
