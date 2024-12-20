@@ -4,16 +4,23 @@ run:
 
 linters:
   enable:
-    - govet
-    - gofmt
-    - gocyclo
     - errcheck
-    - gosimple
-    - staticcheck
-    - unused
+    - goconst
+    - gocyclo
+    - godot
+    - gofmt
+    - govet
     - lll
-    - stylecheck
     - misspell
+    - nilerr
     - prealloc
-    - typecheck
+    - predeclared
     - revive
+    - staticcheck
+    - stylecheck
+    - tenv
+    - typecheck
+    - unconvert
+    - unparam
+    - unused
+    - unused
