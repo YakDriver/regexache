@@ -15,12 +15,12 @@ func TestMustCompile_CacheBasicPattern(t *testing.T) {
 }
 
 func TestMustCompile_CacheComplexPattern(t *testing.T) {
-	pattern := `(\d{3}-\d{2}-\d{4})|($begin:math:text$\\d{3}$end:math:text$\s\d{3}-\d{4})` // US phone numbers (basic format)
-	regex1 := MustCompile(pattern)
-	regex2 := MustCompile(pattern)
+	p := `(\d{3}-\d{2}-\d{4})|($begin:math:text$\\d{3}$end:math:text$\s\d{3}-\d{4})` // US phone numbers (basic format)
+	regex1 := MustCompile(p)
+	regex2 := MustCompile(p)
 
 	if regex1 != regex2 {
-		t.Errorf("Expected cached regex instances to be the same for pattern: %s", pattern)
+		t.Errorf("Expected cached regex instances to be the same for pattern: %s", p)
 	}
 }
 
