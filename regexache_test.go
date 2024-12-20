@@ -1,7 +1,6 @@
 package regexache
 
 import (
-	"sync"
 	"testing"
 )
 
@@ -126,7 +125,6 @@ func BenchmarkMustCompile(b *testing.B) {
 	b.Run("CachingDisabled_PhoneNumberPattern", func(b *testing.B) {
 		caching = false
 		for i := 0; i < b.N; i++ {
-			cache = sync.Map{} // reset global cache
 			MustCompile(phoneNumberPattern)
 		}
 	})
