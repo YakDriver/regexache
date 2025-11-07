@@ -22,7 +22,7 @@ jobs:
       run: go test -v ./...
 
     - name: Run golangci-lint 
-      uses: golangci/golangci-lint-action@971e284b6050e8a5849b72094c50ab08da042db8
+      uses: golangci/golangci-lint-action@v2
       with:
         version: latest
 
