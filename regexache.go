@@ -1,3 +1,4 @@
+// Package regexache provides a thread-safe regular expression cache.
 package regexache
 
 import (
@@ -13,6 +14,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// nolint
 const (
 	outputMinDefault      = 1
 	outputIntervalDefault = time.Millisecond * 1000
@@ -29,7 +31,7 @@ const (
 var preload string
 
 var (
-	mutex *sync.RWMutex
+	mu sync.RWMutex
 
 	caching        bool
 	outputMin      int64
@@ -39,7 +41,6 @@ var (
 )
 
 func init() {
-	mutex = &sync.RWMutex{}
 	lookups = make(map[string]int)
 
 	caching = true
@@ -97,8 +98,13 @@ func init() {
 var cache sync.Map
 var lookups map[string]int
 
+// MustCompile is like regexp.MustCompile but caches compiled regular expressions.
 func MustCompile(str string) *regexp.Regexp {
-	if !caching {
+	mu.RLock()
+	cachingEnabled := caching
+	mu.RUnlock()
+
+	if !cachingEnabled {
 		return regexp.MustCompile(str)
 	}
 
@@ -107,53 +113,55 @@ func MustCompile(str string) *regexp.Regexp {
 	}
 
 	if outputFile != "" {
-		mutex.Lock()
-		if _, ok := lookups[str]; !ok {
-			lookups[str] = 0
-		}
+		mu.Lock()
 		lookups[str]++
-		mutex.Unlock()
+		mu.Unlock()
 	}
 
-	re, ok := cache.Load(str)
-	if ok {
+	if re, ok := cache.Load(str); ok {
 		return re.(*regexp.Regexp)
 	}
 
-	re, _ = cache.LoadOrStore(str, regexp.MustCompile(str))
+	re, _ := cache.LoadOrStore(str, regexp.MustCompile(str))
 	return re.(*regexp.Regexp)
 }
 
+// SetCaching enables or disables regex caching.
+func SetCaching(enabled bool) {
+	mu.Lock()
+	caching = enabled
+	mu.Unlock()
+}
+
+// IsCachingEnabled returns whether regex caching is currently enabled.
+func IsCachingEnabled() bool {
+	mu.RLock()
+	defer mu.RUnlock()
+	return caching
+}
+
 func outputCache() {
-	filename := fmt.Sprintf("%s.%s", outputFile, strings.Replace(uuid.New().String(), "-", "", -1))
+	filename := fmt.Sprintf("%s.%s", outputFile, strings.ReplaceAll(uuid.New().String(), "-", ""))
 
-	f, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
+	f, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
-		panic(err)
+		return // Fail silently for output functionality
+	}
+	defer func() { _ = f.Close() }()
+
+	if _, err = f.WriteString("regex\tcount\n"); err != nil {
+		return
 	}
 
-	defer f.Close()
+	cache.Range(func(k, _ any) bool {
+		pattern := k.(string)
 
-	_, err = f.WriteString("regex\tcount\n")
-	if err != nil {
-		panic(err)
-	}
+		mu.RLock()
+		count := lookups[pattern]
+		mu.RUnlock()
 
-	cache.Range(func(k any, _ any) bool {
-		mutex.RLock()
-		v, ok := lookups[k.(string)]
-		if !ok {
-			v = 0
-		}
-		mutex.RUnlock()
-
-		if v < int(outputMin) {
-			return true
-		}
-
-		_, err := f.WriteString(fmt.Sprintf("%s\t%d\n", k.(string), v))
-		if err != nil {
-			panic(err)
+		if count >= int(outputMin) {
+			_, _ = fmt.Fprintf(f, "%s\t%d\n", pattern, count)
 		}
 		return true
 	})

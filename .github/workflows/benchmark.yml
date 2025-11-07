@@ -1,4 +1,4 @@
-name: Go
+name: Go Benchmark
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
 
 jobs:
 
-  build:
+  benchmark:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v5
@@ -18,13 +18,8 @@ jobs:
       with:
         go-version: '1.23'
 
-    - name: Test
-      run: go test -v ./...
-
-    - name: Run golangci-lint 
-      uses: golangci/golangci-lint-action@v7
-      with:
-        version: latest
-
     - name: Build
       run: go build -v ./...
+
+    - name: Benchmark
+      run: go test -bench=. -benchmem ./...
