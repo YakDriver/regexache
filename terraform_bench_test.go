@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// Simulate AWS provider regex patterns - mix of common and unique patterns
+// Simulate AWS provider regex patterns - mix of common and unique patterns.
 var awsPatterns = []string{
 	// Common validation patterns (high reuse)
 	`^[a-zA-Z0-9._-]+$`,
@@ -16,14 +16,14 @@ var awsPatterns = []string{
 	`^arn:aws:.*`,
 	`^[0-9]+$`,
 	`^[a-z0-9-]+$`,
-	
+
 	// Resource-specific patterns (medium reuse)
 	`^sg-[0-9a-f]{8,17}$`,
 	`^vpc-[0-9a-f]{8,17}$`,
 	`^subnet-[0-9a-f]{8,17}$`,
 	`^i-[0-9a-f]{8,17}$`,
 	`^vol-[0-9a-f]{8,17}$`,
-	
+
 	// Complex validation patterns (low reuse)
 	`^(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/[0-9]{1,2})?$`,
 	`^[a-zA-Z0-9+/]*={0,2}$`,
@@ -32,7 +32,7 @@ var awsPatterns = []string{
 	`^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$`,
 }
 
-// Generate unique patterns to simulate large provider diversity
+// Generate unique patterns to simulate large provider diversity.
 func generateUniquePatterns(count int) []string {
 	patterns := make([]string, count)
 	for i := 0; i < count; i++ {
@@ -41,106 +41,68 @@ func generateUniquePatterns(count int) []string {
 	return patterns
 }
 
-// BenchmarkTerraformUsagePattern simulates how Terraform actually uses regexache
+// runConfigBenchmark runs a benchmark with the given patterns and config size.
+func runConfigBenchmark(b *testing.B, patterns []string, configSize int, cachingEnabled bool) {
+	SetCaching(cachingEnabled)
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		for j := 0; j < configSize; j++ {
+			pattern := patterns[j%len(patterns)]
+			MustCompile(pattern)
+		}
+	}
+}
+
+// BenchmarkTerraformUsagePattern simulates how Terraform actually uses regexache.
 func BenchmarkTerraformUsagePattern(b *testing.B) {
 	// Generate patterns similar to terraform-provider-aws scale
 	commonPatterns := awsPatterns
 	uniquePatterns := generateUniquePatterns(4500) // Simulate AWS provider scale
-	
+
 	b.Run("SmallConfig_CachingEnabled", func(b *testing.B) {
-		SetCaching(true)
-		b.ResetTimer()
-		
-		for i := 0; i < b.N; i++ {
-			// Simulate small Terraform config - mostly common patterns
-			for j := 0; j < 50; j++ {
-				pattern := commonPatterns[j%len(commonPatterns)]
-				MustCompile(pattern)
-			}
-		}
+		runConfigBenchmark(b, commonPatterns, 50, true)
 	})
-	
+
 	b.Run("SmallConfig_CachingDisabled", func(b *testing.B) {
-		SetCaching(false)
-		b.ResetTimer()
-		
-		for i := 0; i < b.N; i++ {
-			for j := 0; j < 50; j++ {
-				pattern := commonPatterns[j%len(commonPatterns)]
-				MustCompile(pattern)
-			}
-		}
+		runConfigBenchmark(b, commonPatterns, 50, false)
 	})
-	
+
+	// Mix common and unique patterns for large config
+	mixedPatterns := make([]string, 1000)
+	for i := 0; i < 1000; i++ {
+		if i%10 < 3 { // 30% common patterns
+			mixedPatterns[i] = commonPatterns[i%len(commonPatterns)]
+		} else { // 70% unique patterns
+			mixedPatterns[i] = uniquePatterns[i%len(uniquePatterns)]
+		}
+	}
+
 	b.Run("LargeConfig_CachingEnabled", func(b *testing.B) {
-		SetCaching(true)
-		b.ResetTimer()
-		
-		for i := 0; i < b.N; i++ {
-			// Simulate large Terraform config - mix of common and unique
-			for j := 0; j < 1000; j++ {
-				var pattern string
-				if j%10 < 3 { // 30% common patterns
-					pattern = commonPatterns[j%len(commonPatterns)]
-				} else { // 70% unique patterns
-					pattern = uniquePatterns[j%len(uniquePatterns)]
-				}
-				MustCompile(pattern)
-			}
-		}
+		runConfigBenchmark(b, mixedPatterns, 1000, true)
 	})
-	
+
 	b.Run("LargeConfig_CachingDisabled", func(b *testing.B) {
-		SetCaching(false)
-		b.ResetTimer()
-		
-		for i := 0; i < b.N; i++ {
-			for j := 0; j < 1000; j++ {
-				var pattern string
-				if j%10 < 3 {
-					pattern = commonPatterns[j%len(commonPatterns)]
-				} else {
-					pattern = uniquePatterns[j%len(uniquePatterns)]
-				}
-				MustCompile(pattern)
-			}
-		}
+		runConfigBenchmark(b, mixedPatterns, 1000, false)
 	})
-	
+
 	b.Run("WorstCase_AllUnique_CachingEnabled", func(b *testing.B) {
-		SetCaching(true)
-		b.ResetTimer()
-		
-		for i := 0; i < b.N; i++ {
-			// Worst case: all patterns are unique (no cache benefit)
-			for j := 0; j < 500; j++ {
-				pattern := uniquePatterns[j%len(uniquePatterns)]
-				MustCompile(pattern)
-			}
-		}
+		runConfigBenchmark(b, uniquePatterns, 500, true)
 	})
-	
+
 	b.Run("WorstCase_AllUnique_CachingDisabled", func(b *testing.B) {
-		SetCaching(false)
-		b.ResetTimer()
-		
-		for i := 0; i < b.N; i++ {
-			for j := 0; j < 500; j++ {
-				pattern := uniquePatterns[j%len(uniquePatterns)]
-				MustCompile(pattern)
-			}
-		}
+		runConfigBenchmark(b, uniquePatterns, 500, false)
 	})
 }
 
-// BenchmarkMemoryPressure tests memory usage under different scenarios
+// BenchmarkMemoryPressure tests memory usage under different scenarios.
 func BenchmarkMemoryPressure(b *testing.B) {
 	patterns := generateUniquePatterns(10000)
-	
+
 	b.Run("CacheGrowth_Enabled", func(b *testing.B) {
 		SetCaching(true)
 		b.ResetTimer()
-		
+
 		for i := 0; i < b.N; i++ {
 			// Simulate cache growing with unique patterns
 			for j := 0; j < 1000; j++ {
@@ -148,11 +110,11 @@ func BenchmarkMemoryPressure(b *testing.B) {
 			}
 		}
 	})
-	
+
 	b.Run("NoCache_Disabled", func(b *testing.B) {
 		SetCaching(false)
 		b.ResetTimer()
-		
+
 		for i := 0; i < b.N; i++ {
 			for j := 0; j < 1000; j++ {
 				MustCompile(patterns[j])
@@ -161,10 +123,10 @@ func BenchmarkMemoryPressure(b *testing.B) {
 	})
 }
 
-// BenchmarkPatternReuse tests different reuse scenarios
+// BenchmarkPatternReuse tests different reuse scenarios.
 func BenchmarkPatternReuse(b *testing.B) {
 	basePattern := `^[a-zA-Z0-9._-]+$`
-	
+
 	scenarios := []struct {
 		name      string
 		reuseRate float64 // Probability of reusing base pattern vs unique
@@ -174,16 +136,16 @@ func BenchmarkPatternReuse(b *testing.B) {
 		{"LowReuse_10pct", 0.1},
 		{"NoReuse_0pct", 0.0},
 	}
-	
+
 	for _, scenario := range scenarios {
 		b.Run(scenario.name+"_CachingEnabled", func(b *testing.B) {
 			SetCaching(true)
-			rand.Seed(time.Now().UnixNano())
+			rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 			b.ResetTimer()
-			
+
 			for i := 0; i < b.N; i++ {
 				for j := 0; j < 1000; j++ {
-					if rand.Float64() < scenario.reuseRate {
+					if rng.Float64() < scenario.reuseRate {
 						MustCompile(basePattern)
 					} else {
 						MustCompile(fmt.Sprintf(`^unique-%d-[a-z]+$`, j))
@@ -191,15 +153,15 @@ func BenchmarkPatternReuse(b *testing.B) {
 				}
 			}
 		})
-		
+
 		b.Run(scenario.name+"_CachingDisabled", func(b *testing.B) {
 			SetCaching(false)
-			rand.Seed(time.Now().UnixNano())
+			rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 			b.ResetTimer()
-			
+
 			for i := 0; i < b.N; i++ {
 				for j := 0; j < 1000; j++ {
-					if rand.Float64() < scenario.reuseRate {
+					if rng.Float64() < scenario.reuseRate {
 						MustCompile(basePattern)
 					} else {
 						MustCompile(fmt.Sprintf(`^unique-%d-[a-z]+$`, j))
@@ -210,16 +172,16 @@ func BenchmarkPatternReuse(b *testing.B) {
 	}
 }
 
-// BenchmarkColdStart simulates Terraform's cold start behavior
+// BenchmarkColdStart simulates Terraform's cold start behavior.
 func BenchmarkColdStart(b *testing.B) {
 	patterns := append(awsPatterns, generateUniquePatterns(100)...)
-	
+
 	b.Run("ColdStart_WithPreload", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			// Reset cache to simulate cold start
 			cache = sync.Map{}
 			SetCaching(true)
-			
+
 			b.StartTimer()
 			// Simulate initial pattern compilation burst
 			for _, pattern := range patterns {
@@ -228,11 +190,11 @@ func BenchmarkColdStart(b *testing.B) {
 			b.StopTimer()
 		}
 	})
-	
+
 	b.Run("ColdStart_NoCache", func(b *testing.B) {
 		SetCaching(false)
 		b.ResetTimer()
-		
+
 		for i := 0; i < b.N; i++ {
 			for _, pattern := range patterns {
 				MustCompile(pattern)

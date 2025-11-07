@@ -1,3 +1,4 @@
+// Package regexache provides a thread-safe regular expression cache.
 package regexache
 
 import (
@@ -97,6 +98,7 @@ func init() {
 var cache sync.Map
 var lookups map[string]int
 
+// MustCompile is like regexp.MustCompile but caches compiled regular expressions.
 func MustCompile(str string) *regexp.Regexp {
 	mu.RLock()
 	cachingEnabled := caching
@@ -145,7 +147,7 @@ func outputCache() {
 	if err != nil {
 		return // Fail silently for output functionality
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	if _, err = f.WriteString("regex\tcount\n"); err != nil {
 		return
@@ -153,13 +155,13 @@ func outputCache() {
 
 	cache.Range(func(k, _ any) bool {
 		pattern := k.(string)
-		
+
 		mu.RLock()
 		count := lookups[pattern]
 		mu.RUnlock()
 
 		if count >= int(outputMin) {
-			f.WriteString(fmt.Sprintf("%s\t%d\n", pattern, count))
+			_, _ = fmt.Fprintf(f, "%s\t%d\n", pattern, count)
 		}
 		return true
 	})

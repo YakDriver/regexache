@@ -1,3 +1,5 @@
+version: 2
+
 run:
   timeout: 5m
   tests: true
@@ -5,22 +7,17 @@ run:
 linters:
   enable:
     - errcheck
-    - goconst
-    - gocyclo
-    - godot
-    - gofmt
     - govet
-    - lll
-    - misspell
-    - nilerr
-    - prealloc
-    - predeclared
-    - revive
     - staticcheck
-    - stylecheck
-    - tenv
-    - typecheck
+    - unused
+    - ineffassign
+    - misspell
+    - revive
     - unconvert
     - unparam
-    - unused
-    - unused
+    - gocyclo
+    - prealloc
+    - goconst
+    - godot
+    - gocognit
+    - dupl

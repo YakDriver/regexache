@@ -88,10 +88,10 @@ func TestMustCompile_InvalidPattern(t *testing.T) {
 func TestMustCompile_Concurrent(t *testing.T) {
 	SetCaching(true)
 	pattern := "concurrent-test"
-	
+
 	var wg sync.WaitGroup
 	results := make([]*regexp.Regexp, 100)
-	
+
 	// Test concurrent access to same pattern
 	for i := 0; i < 100; i++ {
 		wg.Add(1)
@@ -100,9 +100,9 @@ func TestMustCompile_Concurrent(t *testing.T) {
 			results[idx] = MustCompile(pattern)
 		}(i)
 	}
-	
+
 	wg.Wait()
-	
+
 	// All results should be the same cached instance
 	first := results[0]
 	for i, result := range results {
@@ -112,26 +112,26 @@ func TestMustCompile_Concurrent(t *testing.T) {
 	}
 }
 
-func TestMustCompile_ConcurrentToggling(t *testing.T) {
+func TestMustCompile_ConcurrentToggling(_ *testing.T) {
 	var wg sync.WaitGroup
-	
+
 	// Test concurrent caching enable/disable
 	for i := 0; i < 50; i++ {
 		wg.Add(2)
-		
+
 		go func() {
 			defer wg.Done()
 			SetCaching(true)
 			MustCompile("toggle-test")
 		}()
-		
+
 		go func() {
 			defer wg.Done()
 			SetCaching(false)
 			MustCompile("toggle-test")
 		}()
 	}
-	
+
 	wg.Wait()
 	SetCaching(true) // Reset
 }
@@ -140,15 +140,15 @@ func TestMustCompile_WithStandardization(t *testing.T) {
 	// Save original state
 	originalStandardizing := standardizing
 	defer func() { standardizing = originalStandardizing }()
-	
+
 	// Enable standardization
 	standardizing = true
 	SetCaching(true)
-	
+
 	// Test that standardized patterns are cached correctly
 	regex1 := MustCompile("[a-zA-Z0-9_]")
 	regex2 := MustCompile("[a-zA-Z0-9_]")
-	
+
 	if regex1 != regex2 {
 		t.Error("Expected cached regex instances for standardized patterns")
 	}
@@ -157,7 +157,7 @@ func TestMustCompile_WithStandardization(t *testing.T) {
 func TestEnvironmentVariables(t *testing.T) {
 	// Test REGEXACHE_OFF environment variable handling
 	// Note: This tests the logic, but init() has already run
-	
+
 	tests := []struct {
 		name     string
 		envValue string
@@ -167,15 +167,12 @@ func TestEnvironmentVariables(t *testing.T) {
 		{"set", "1", false},
 		{"any_value", "true", false},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Simulate the init logic
-			caching := true
-			if tt.envValue != "" {
-				caching = false
-			}
-			
+			caching := tt.envValue == ""
+
 			if caching != tt.expected {
 				t.Errorf("Expected caching=%v for env value '%s'", tt.expected, tt.envValue)
 			}
@@ -191,18 +188,18 @@ func TestOutputFunctionality(t *testing.T) {
 		outputFile = originalOutputFile
 		lookups = originalLookups
 	}()
-	
+
 	// Test output tracking
 	outputFile = "test-output"
 	lookups = make(map[string]int)
-	
+
 	SetCaching(true)
-	
+
 	// Generate some lookups
 	MustCompile("test1")
 	MustCompile("test1") // Second lookup
 	MustCompile("test2")
-	
+
 	// Verify lookup counting
 	if lookups["test1"] != 2 {
 		t.Errorf("Expected 2 lookups for test1, got %d", lookups["test1"])
@@ -210,12 +207,12 @@ func TestOutputFunctionality(t *testing.T) {
 	if lookups["test2"] != 1 {
 		t.Errorf("Expected 1 lookup for test2, got %d", lookups["test2"])
 	}
-	
+
 	// Test outputCache function (should not panic)
 	outputCache()
-	
+
 	// Clean up test file if created
-	os.Remove("test-output")
+	_ = os.Remove("test-output")
 }
 
 func BenchmarkMustCompile(b *testing.B) {
