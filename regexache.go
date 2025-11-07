@@ -125,6 +125,16 @@ func MustCompile(str string) *regexp.Regexp {
 	return re.(*regexp.Regexp)
 }
 
+// SetCaching enables or disables regex caching.
+func SetCaching(enabled bool) {
+	caching = enabled
+}
+
+// IsCachingEnabled returns whether regex caching is currently enabled.
+func IsCachingEnabled() bool {
+	return caching
+}
+
 func outputCache() {
 	filename := fmt.Sprintf("%s.%s", outputFile, strings.Replace(uuid.New().String(), "-", "", -1))
 

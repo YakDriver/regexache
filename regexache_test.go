@@ -33,14 +33,14 @@ func BenchmarkMustCompile(b *testing.B) {
 
 	// Literal pattern
 	b.Run("CachingDisabled_LiteralPattern", func(b *testing.B) {
-		caching = false
+		SetCaching(false)
 		for i := 0; i < b.N; i++ {
 			MustCompile(literalPattern)
 		}
 	})
 
 	b.Run("CachingEnabled_LiteralPattern", func(b *testing.B) {
-		caching = true
+		SetCaching(true)
 		MustCompile(literalPattern) // preload the cache
 
 		b.ResetTimer()
@@ -51,14 +51,14 @@ func BenchmarkMustCompile(b *testing.B) {
 
 	// Alphanumeric pattern
 	b.Run("CachingDisabled_AlphaNumericPattern", func(b *testing.B) {
-		caching = false
+		SetCaching(false)
 		for i := 0; i < b.N; i++ {
 			MustCompile(alphaNumericPattern)
 		}
 	})
 
 	b.Run("CachingEnabled_AlphaNumericPattern", func(b *testing.B) {
-		caching = true
+		SetCaching(true)
 		MustCompile(alphaNumericPattern) // preload the cache
 
 		b.ResetTimer()
@@ -69,14 +69,14 @@ func BenchmarkMustCompile(b *testing.B) {
 
 	// IP pattern
 	b.Run("CachingDisabled_IPPattern", func(b *testing.B) {
-		caching = false
+		SetCaching(false)
 		for i := 0; i < b.N; i++ {
 			MustCompile(ipPattern)
 		}
 	})
 
 	b.Run("CachingEnabled_IPPattern", func(b *testing.B) {
-		caching = true
+		SetCaching(true)
 		MustCompile(ipPattern) // preload the cache
 
 		b.ResetTimer()
@@ -87,14 +87,14 @@ func BenchmarkMustCompile(b *testing.B) {
 
 	// Date pattern
 	b.Run("CachingDisabled_DatePattern", func(b *testing.B) {
-		caching = false
+		SetCaching(false)
 		for i := 0; i < b.N; i++ {
 			MustCompile(datePattern)
 		}
 	})
 
 	b.Run("CachingEnabled_DatePattern", func(b *testing.B) {
-		caching = true
+		SetCaching(true)
 		MustCompile(datePattern) // preload the cache
 
 		b.ResetTimer()
@@ -105,14 +105,14 @@ func BenchmarkMustCompile(b *testing.B) {
 
 	// Color code pattern
 	b.Run("CachingDisabled_ColorCodePattern", func(b *testing.B) {
-		caching = false
+		SetCaching(false)
 		for i := 0; i < b.N; i++ {
 			MustCompile(colorCodePattern)
 		}
 	})
 
 	b.Run("CachingEnabled_ColorCodePattern", func(b *testing.B) {
-		caching = true
+		SetCaching(true)
 		MustCompile(colorCodePattern) // preload the cache
 
 		b.ResetTimer()
@@ -123,14 +123,14 @@ func BenchmarkMustCompile(b *testing.B) {
 
 	// Phone number pattern
 	b.Run("CachingDisabled_PhoneNumberPattern", func(b *testing.B) {
-		caching = false
+		SetCaching(false)
 		for i := 0; i < b.N; i++ {
 			MustCompile(phoneNumberPattern)
 		}
 	})
 
 	b.Run("CachingEnabled_PhoneNumberPattern", func(b *testing.B) {
-		caching = true
+		SetCaching(true)
 		MustCompile(phoneNumberPattern) // preload the cache
 
 		b.ResetTimer()
