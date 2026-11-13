@@ -81,8 +81,8 @@ func init() {
 	}
 
 	if v := os.Getenv(REGEXACHE_PRELOAD_OFF); v == "" && caching.Load() {
-		preRE := strings.Split(preload, "\n")
-		for _, r := range preRE {
+		preRE := strings.SplitSeq(preload, "\n")
+		for r := range preRE {
 			if r == "" {
 				continue
 			}

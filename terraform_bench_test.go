@@ -35,7 +35,7 @@ var awsPatterns = []string{
 // Generate unique patterns to simulate large provider diversity.
 func generateUniquePatterns(count int) []string {
 	patterns := make([]string, count)
-	for i := 0; i < count; i++ {
+	for i := range count {
 		patterns[i] = fmt.Sprintf(`^resource-%d-[a-zA-Z0-9]{%d}$`, i, 8+i%10)
 	}
 	return patterns
@@ -47,7 +47,7 @@ func runConfigBenchmark(b *testing.B, patterns []string, configSize int, caching
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		for j := 0; j < configSize; j++ {
+		for j := range configSize {
 			pattern := patterns[j%len(patterns)]
 			MustCompile(pattern)
 		}
@@ -70,7 +70,7 @@ func BenchmarkTerraformUsagePattern(b *testing.B) {
 
 	// Mix common and unique patterns for large config
 	mixedPatterns := make([]string, 1000)
-	for i := 0; i < 1000; i++ {
+	for i := range 1000 {
 		if i%10 < 3 { // 30% common patterns
 			mixedPatterns[i] = commonPatterns[i%len(commonPatterns)]
 		} else { // 70% unique patterns
@@ -105,7 +105,7 @@ func BenchmarkMemoryPressure(b *testing.B) {
 
 		for i := 0; i < b.N; i++ {
 			// Simulate cache growing with unique patterns
-			for j := 0; j < 1000; j++ {
+			for j := range 1000 {
 				MustCompile(patterns[j])
 			}
 		}
@@ -116,7 +116,7 @@ func BenchmarkMemoryPressure(b *testing.B) {
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
-			for j := 0; j < 1000; j++ {
+			for j := range 1000 {
 				MustCompile(patterns[j])
 			}
 		}
@@ -144,7 +144,7 @@ func BenchmarkPatternReuse(b *testing.B) {
 			b.ResetTimer()
 
 			for i := 0; i < b.N; i++ {
-				for j := 0; j < 1000; j++ {
+				for j := range 1000 {
 					if rng.Float64() < scenario.reuseRate {
 						MustCompile(basePattern)
 					} else {
@@ -160,7 +160,7 @@ func BenchmarkPatternReuse(b *testing.B) {
 			b.ResetTimer()
 
 			for i := 0; i < b.N; i++ {
-				for j := 0; j < 1000; j++ {
+				for j := range 1000 {
 					if rng.Float64() < scenario.reuseRate {
 						MustCompile(basePattern)
 					} else {

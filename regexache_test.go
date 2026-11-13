@@ -93,7 +93,7 @@ func TestMustCompile_Concurrent(t *testing.T) {
 	results := make([]*regexp.Regexp, 100)
 
 	// Test concurrent access to same pattern
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
@@ -116,7 +116,7 @@ func TestMustCompile_ConcurrentToggling(_ *testing.T) {
 	var wg sync.WaitGroup
 
 	// Test concurrent caching enable/disable
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		wg.Add(2)
 
 		go func() {
