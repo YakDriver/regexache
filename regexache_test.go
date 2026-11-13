@@ -331,3 +331,19 @@ func BenchmarkMustCompile(b *testing.B) {
 		}
 	})
 }
+
+// BenchmarkMustCompileParallel measures cache hits from many goroutines at
+// once, which is where shared state on the hot path shows up as contention.
+func BenchmarkMustCompileParallel(b *testing.B) {
+	pattern := `^arn:aws[\w-]*:events:[a-z]{2}(-[a-z]+)+-\d{1,2}:[0-9]{12}:event-bus\/[0-9A-Za-z_.-]+$`
+
+	SetCaching(true)
+	MustCompile(pattern) // preload the cache
+
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			MustCompile(pattern)
+		}
+	})
+}
