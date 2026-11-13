@@ -5,14 +5,13 @@ import (
 	_ "embed"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"github.com/google/uuid"
 )
 
 // nolint
@@ -134,19 +133,36 @@ func IsCachingEnabled() bool {
 	return caching.Load()
 }
 
+// outputCache writes the cache contents to <REGEXACHE_OUTPUT>.<pid>. Each
+// process has its own file, rewritten in place every interval, so parallel
+// processes don't collide and the latest file holds the latest snapshot.
 func outputCache() {
-	filename := fmt.Sprintf("%s.%s", outputFile, strings.ReplaceAll(uuid.New().String(), "-", ""))
+	filename := fmt.Sprintf("%s.%d", outputFile, os.Getpid())
 
-	f, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+	// Write to a temp file and rename it so readers never see a partial file.
+	f, err := os.CreateTemp(filepath.Dir(filename), filepath.Base(filename)+".tmp*")
 	if err != nil {
 		return // Fail silently for output functionality
 	}
-	defer func() { _ = f.Close() }()
+	tmp := f.Name()
+	defer func() { _ = os.Remove(tmp) }() // no-op after a successful rename
 
-	if _, err = f.WriteString("regex\tcount\n"); err != nil {
+	if err := writeCache(f); err != nil {
+		_ = f.Close()
 		return
 	}
+	if err := f.Close(); err != nil {
+		return
+	}
+	_ = os.Rename(tmp, filename)
+}
 
+func writeCache(f *os.File) error {
+	if _, err := f.WriteString("regex\tcount\n"); err != nil {
+		return err
+	}
+
+	var err error
 	cache.Range(func(k, _ any) bool {
 		pattern := k.(string)
 
@@ -155,8 +171,9 @@ func outputCache() {
 		mu.RUnlock()
 
 		if count >= int(outputMin) {
-			_, _ = fmt.Fprintf(f, "%s\t%d\n", pattern, count)
+			_, err = fmt.Fprintf(f, "%s\t%d\n", pattern, count)
 		}
-		return true
+		return err == nil
 	})
+	return err
 }
