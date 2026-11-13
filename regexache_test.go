@@ -1,8 +1,12 @@
 package regexache
 
 import (
+	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"regexp"
+	"strings"
 	"sync"
 	"testing"
 )
@@ -17,12 +21,18 @@ func TestMustCompile_CacheBasicPattern(t *testing.T) {
 }
 
 func TestMustCompile_CacheComplexPattern(t *testing.T) {
-	p := `(\d{3}-\d{2}-\d{4})|($begin:math:text$\\d{3}$end:math:text$\s\d{3}-\d{4})` // US phone numbers (basic format)
+	p := `(\d{3}-\d{2}-\d{4})|(\(\d{3}\)\s\d{3}-\d{4})` // US phone numbers (basic format)
 	regex1 := MustCompile(p)
 	regex2 := MustCompile(p)
 
 	if regex1 != regex2 {
 		t.Errorf("Expected cached regex instances to be the same for pattern: %s", p)
+	}
+
+	for _, s := range []string{"123-45-6789", "(555) 123-4567"} {
+		if !regex1.MatchString(s) {
+			t.Errorf("Expected %q to match %s", s, p)
+		}
 	}
 }
 
@@ -154,9 +164,14 @@ func TestMustCompile_WithStandardization(t *testing.T) {
 	}
 }
 
+// TestEnvironmentVariables checks that init() reads REGEXACHE_OFF. init()
+// runs once per process, so each case re-runs this test binary in a
+// subprocess with the variable set and reports what init() decided.
 func TestEnvironmentVariables(t *testing.T) {
-	// Test REGEXACHE_OFF environment variable handling
-	// Note: This tests the logic, but init() has already run
+	if os.Getenv("REGEXACHE_TEST_CHILD") != "" {
+		fmt.Printf("caching=%t\n", IsCachingEnabled())
+		return
+	}
 
 	tests := []struct {
 		name     string
@@ -170,11 +185,16 @@ func TestEnvironmentVariables(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Simulate the init logic
-			caching := tt.envValue == ""
+			cmd := exec.Command(os.Args[0], "-test.run=^TestEnvironmentVariables$")
+			cmd.Env = append(os.Environ(), "REGEXACHE_TEST_CHILD=1", REGEXACHE_OFF+"="+tt.envValue)
+			out, err := cmd.Output()
+			if err != nil {
+				t.Fatalf("subprocess failed: %v", err)
+			}
 
-			if caching != tt.expected {
-				t.Errorf("Expected caching=%v for env value '%s'", tt.expected, tt.envValue)
+			want := fmt.Sprintf("caching=%t", tt.expected)
+			if !strings.Contains(string(out), want) {
+				t.Errorf("REGEXACHE_OFF=%q: expected %s, got output:\n%s", tt.envValue, want, out)
 			}
 		})
 	}
@@ -189,8 +209,9 @@ func TestOutputFunctionality(t *testing.T) {
 		lookups = originalLookups
 	}()
 
-	// Test output tracking
-	outputFile = "test-output"
+	// Test output tracking. Write under t.TempDir() so nothing is left in
+	// the source tree.
+	outputFile = filepath.Join(t.TempDir(), "test-output")
 	lookups = make(map[string]int)
 
 	SetCaching(true)
@@ -208,11 +229,21 @@ func TestOutputFunctionality(t *testing.T) {
 		t.Errorf("Expected 1 lookup for test2, got %d", lookups["test2"])
 	}
 
-	// Test outputCache function (should not panic)
 	outputCache()
 
-	// Clean up test file if created
-	_ = os.Remove("test-output")
+	files, err := filepath.Glob(outputFile + "*")
+	if err != nil || len(files) != 1 {
+		t.Fatalf("Expected one output file, got %v (err %v)", files, err)
+	}
+	data, err := os.ReadFile(files[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"regex\tcount\n", "test1\t2\n", "test2\t1\n"} {
+		if !strings.Contains(string(data), want) {
+			t.Errorf("Expected output to contain %q, got:\n%s", want, data)
+		}
+	}
 }
 
 func BenchmarkMustCompile(b *testing.B) {
@@ -221,7 +252,7 @@ func BenchmarkMustCompile(b *testing.B) {
 	ipPattern := `^(\d{1,3}\.){3}\d{1,3}$`
 	datePattern := `^\d{4}-\d{2}-\d{2}$`
 	colorCodePattern := `^#([a-fA-F0-9]{6}|[a-fA-F0-9]{3})$`
-	phoneNumberPattern := `(\d{3}-\d{2}-\d{4})|($begin:math:text$\\d{3}$end:math:text$\s\d{3}-\d{4})`
+	phoneNumberPattern := `(\d{3}-\d{2}-\d{4})|(\(\d{3}\)\s\d{3}-\d{4})`
 
 	// Literal pattern
 	b.Run("CachingDisabled_LiteralPattern", func(b *testing.B) {

@@ -9,9 +9,10 @@ Unlike excellent caches, such as [go-cache](https://github.com/patrickmn/go-cach
 Benchmarks show `regexache` provides significant performance improvements across all usage patterns:
 
 ### Pattern Compilation Performance
-- **Simple patterns**: 39x faster (461ns → 12ns)
-- **Complex patterns**: 88x faster (1016ns → 11ns) 
-- **Very complex patterns**: 316x faster (4332ns → 14ns)
+`BenchmarkMustCompile`, Apple M3 Max:
+- **Simple patterns**: 43x faster (424ns → 9.8ns)
+- **Complex patterns**: 96x faster (926ns → 9.6ns)
+- **Very complex patterns**: 365x faster (3520ns → 9.6ns)
 - **Memory**: Zero allocations with caching vs 16-125 allocations without
 - **Parallel cache hits**: ~1ns per lookup with 16 goroutines (`BenchmarkMustCompileParallel`); the hot path takes no locks
 
@@ -30,7 +31,7 @@ The performance benefits come not just from avoiding recompilation, but also fro
 
 For projects with few regular expressions, caching is unlikely to improve memory use--stick with static use of `regexp.MustCompile()`. For projects with thousands of regular expressions, and especially untracked duplicates, using `regexache` can save significant memory.
 
-Potential problems with using `regexache` include cache contention and preventing garbage collection of regular expressions. Cache hits are lock-free: the cache is a `sync.Map` and the caching on/off flag is an `atomic.Bool`. A lock is only taken when `REGEXACHE_OUTPUT` is set, to count lookups. For garbage collection, if you're not using `regexache` and instantiate a regular expressions locally and it goes out of scope without any references to it remaining, Go may reclaim the memory. However, `regexache` keeps pointers to the regular expressions in the cache so they cannot be garbage collected until the entry expires and is cleaned out of the cache. Benchmark various expiration settings to see what works best.
+Potential problems with using `regexache` include cache contention and preventing garbage collection of regular expressions. Cache hits are lock-free: the cache is a `sync.Map` and the caching on/off flag is an `atomic.Bool`. A lock is only taken when `REGEXACHE_OUTPUT` is set, to count lookups. For garbage collection, if you're not using `regexache` and instantiate a regular expressions locally and it goes out of scope without any references to it remaining, Go may reclaim the memory. However, `regexache` keeps pointers to the regular expressions in the cache, and entries never expire, so cached regular expressions stay in memory for the life of the process.
 
 ## Using regexache
 
@@ -102,6 +103,7 @@ if regexache.IsCachingEnabled() {
 | REGEXACHE_OUTPUT | File to output the cache contents to. Default: Empty (Don't output cache). |
 | REGEXACHE_OUTPUT_MIN | Minimum number of lookups entries need to include when listing cache entries. Default: 1. |
 | REGEXACHE_OUTPUT_INTERVAL | If outputing the cache, output every X milliseconds. Default: 1000 (1 second). |
+| REGEXACHE_PRELOAD_OFF | Any value skips compiling the patterns in `preload.txt` at startup. Default: Empty (Preload). |
 | REGEXACHE_STANDARDIZE| Standardize expressions before caching. Default: Empty (Don't standardize). |
 
 ## Tests
