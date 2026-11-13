@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
@@ -31,9 +32,13 @@ const (
 var preload string
 
 var (
+	// mu guards lookups.
 	mu sync.RWMutex
 
-	caching        bool
+	// caching is read on every MustCompile call. An atomic avoids the
+	// reader-count contention an RWMutex causes under parallel use.
+	caching atomic.Bool
+
 	outputMin      int64
 	outputFile     string
 	outputInterval time.Duration
@@ -43,10 +48,7 @@ var (
 func init() {
 	lookups = make(map[string]int)
 
-	caching = true
-	if v := os.Getenv(REGEXACHE_OFF); v != "" {
-		caching = false
-	}
+	caching.Store(os.Getenv(REGEXACHE_OFF) == "")
 
 	outputInterval = outputIntervalDefault
 	if v := os.Getenv(REGEXACHE_OUTPUT_INTERVAL); v != "" {
@@ -68,7 +70,7 @@ func init() {
 		outputMin = int64(i)
 	}
 
-	if v := os.Getenv(REGEXACHE_OUTPUT); v != "" && caching {
+	if v := os.Getenv(REGEXACHE_OUTPUT); v != "" && caching.Load() {
 		outputFile = v
 		go func() {
 			for {
@@ -78,7 +80,7 @@ func init() {
 		}()
 	}
 
-	if v := os.Getenv(REGEXACHE_PRELOAD_OFF); v == "" && caching {
+	if v := os.Getenv(REGEXACHE_PRELOAD_OFF); v == "" && caching.Load() {
 		preRE := strings.Split(preload, "\n")
 		for _, r := range preRE {
 			if r == "" {
@@ -100,11 +102,7 @@ var lookups map[string]int
 
 // MustCompile is like regexp.MustCompile but caches compiled regular expressions.
 func MustCompile(str string) *regexp.Regexp {
-	mu.RLock()
-	cachingEnabled := caching
-	mu.RUnlock()
-
-	if !cachingEnabled {
+	if !caching.Load() {
 		return regexp.MustCompile(str)
 	}
 
@@ -128,16 +126,12 @@ func MustCompile(str string) *regexp.Regexp {
 
 // SetCaching enables or disables regex caching.
 func SetCaching(enabled bool) {
-	mu.Lock()
-	caching = enabled
-	mu.Unlock()
+	caching.Store(enabled)
 }
 
 // IsCachingEnabled returns whether regex caching is currently enabled.
 func IsCachingEnabled() bool {
-	mu.RLock()
-	defer mu.RUnlock()
-	return caching
+	return caching.Load()
 }
 
 func outputCache() {

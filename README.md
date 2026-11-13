@@ -13,6 +13,7 @@ Benchmarks show `regexache` provides significant performance improvements across
 - **Complex patterns**: 88x faster (1016ns → 11ns) 
 - **Very complex patterns**: 316x faster (4332ns → 14ns)
 - **Memory**: Zero allocations with caching vs 16-125 allocations without
+- **Parallel cache hits**: ~1ns per lookup with 16 goroutines (`BenchmarkMustCompileParallel`); the hot path takes no locks
 
 ### Real-World Usage Scenarios
 - **Small configs** (high pattern reuse): 208x faster
@@ -29,7 +30,7 @@ The performance benefits come not just from avoiding recompilation, but also fro
 
 For projects with few regular expressions, caching is unlikely to improve memory use--stick with static use of `regexp.MustCompile()`. For projects with thousands of regular expressions, and especially untracked duplicates, using `regexache` can save significant memory.
 
-Potential problems with using `regexache` include cache contention and preventing garbage collection of regular expressions. Cache contention results from the cache map being read-locked for reads and locked for updates. For garbage collection, if you're not using `regexache` and instantiate a regular expressions locally and it goes out of scope without any references to it remaining, Go may reclaim the memory. However, `regexache` keeps pointers to the regular expressions in the cache so they cannot be garbage collected until the entry expires and is cleaned out of the cache. Benchmark various expiration settings to see what works best.
+Potential problems with using `regexache` include cache contention and preventing garbage collection of regular expressions. Cache hits are lock-free: the cache is a `sync.Map` and the caching on/off flag is an `atomic.Bool`. A lock is only taken when `REGEXACHE_OUTPUT` is set, to count lookups. For garbage collection, if you're not using `regexache` and instantiate a regular expressions locally and it goes out of scope without any references to it remaining, Go may reclaim the memory. However, `regexache` keeps pointers to the regular expressions in the cache so they cannot be garbage collected until the entry expires and is cleaned out of the cache. Benchmark various expiration settings to see what works best.
 
 ## Using regexache
 
