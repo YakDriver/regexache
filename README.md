@@ -140,3 +140,7 @@ TF_ACC=1 go test \
     -timeout 60m
 pprof -http=localhost:4599 mem.prof
 ```
+
+## Development
+
+`make fix` applies `go fix` plus the standalone [`modernize`](https://pkg.go.dev/golang.org/x/tools/go/analysis/passes/modernize) analyzers that `go fix` doesn't include yet (listed in `MODERNIZE_EXTRA` in `GNUmakefile`). `make fix-check` reports the same changes without applying them, and CI runs it. Both need the Go version in `go.mod`.
