@@ -80,20 +80,27 @@ func init() {
 		}()
 	}
 
+	// Set before preloading so preloaded keys match what MustCompile looks up.
+	standardizing = os.Getenv(REGEXACHE_STANDARDIZE) != ""
+
 	if v := os.Getenv(REGEXACHE_PRELOAD_OFF); v == "" && caching.Load() {
-		preRE := strings.SplitSeq(preload, "\n")
-		for r := range preRE {
-			if r == "" {
-				continue
-			}
-
-			cache.Store(r, regexp.MustCompile(r))
-		}
+		preloadPatterns(preload)
 	}
+}
 
-	standardizing = false
-	if v := os.Getenv(REGEXACHE_STANDARDIZE); v != "" {
-		standardizing = true
+// preloadPatterns compiles and caches each newline-separated pattern, keyed
+// the same way MustCompile looks it up.
+func preloadPatterns(patterns string) {
+	for r := range strings.SplitSeq(patterns, "\n") {
+		if r == "" {
+			continue
+		}
+
+		if standardizing {
+			r = standardize(r)
+		}
+
+		cache.Store(r, regexp.MustCompile(r))
 	}
 }
 
