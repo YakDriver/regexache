@@ -5,21 +5,15 @@ import (
 	"strings"
 )
 
+// Package-level initialization runs before any init() function, so these
+// are ready when init() in regexache.go standardizes preloaded patterns.
 var (
-	numFront *regexp.Regexp
-	capFront *regexp.Regexp
-	lowFront *regexp.Regexp
-	undFront *regexp.Regexp
-	word     *regexp.Regexp
-)
-
-func init() {
 	undFront = regexp.MustCompile(`(\[)([^\]]*)(_)([^\]]*)(\])`)
 	lowFront = regexp.MustCompile(`(\[)([^\]]*)(a-[b-z])([^\]]*)(\])`)
 	capFront = regexp.MustCompile(`(\[)([^\]]*)(A-[B-Z])([^\]]*)(\])`)
 	numFront = regexp.MustCompile(`(\[)([^\]]*)(0-9)([^\]]*)(\])`)
-	word = regexp.MustCompile(`(\[)([^\]]*)(0-9A-Za-z_)([^\]]*)(\])`)
-}
+	word     = regexp.MustCompile(`(\[)([^\]]*)(0-9A-Za-z_)([^\]]*)(\])`)
+)
 
 func standardize(expr string) string {
 	if !strings.Contains(expr, `\\_`) { // underscores don't need escaping but this could confuse the de-escaping

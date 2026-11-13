@@ -1,6 +1,7 @@
 package regexache
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -99,5 +100,39 @@ func TestStandardize(t *testing.T) {
 				t.Errorf("got %s, expected %s", got, testCase.Expected)
 			}
 		})
+	}
+}
+
+// TestPreloadIsStandardized guards preload.txt: entries already in standard
+// form are hit by MustCompile whether or not REGEXACHE_STANDARDIZE is set.
+func TestPreloadIsStandardized(t *testing.T) {
+	t.Parallel()
+
+	for r := range strings.SplitSeq(preload, "\n") {
+		if r == "" {
+			continue
+		}
+		if got := standardize(r); got != r {
+			t.Errorf("preload.txt entry %q is not standardized; use %q", r, got)
+		}
+	}
+}
+
+func TestPreloadPatterns_Standardizing(t *testing.T) {
+	originalStandardizing := standardizing
+	defer func() { standardizing = originalStandardizing }()
+
+	standardizing = true
+	SetCaching(true)
+
+	raw := `^[a-zA-Z0-9]+-preload-test$`
+	preloadPatterns(raw)
+
+	preloaded, ok := cache.Load(standardize(raw))
+	if !ok {
+		t.Fatalf("expected preload to store standardized key %q", standardize(raw))
+	}
+	if got := MustCompile(raw); got != preloaded {
+		t.Error("expected MustCompile to return the preloaded instance")
 	}
 }
