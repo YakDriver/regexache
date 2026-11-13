@@ -5,7 +5,6 @@ import (
 	_ "embed"
 	"fmt"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -140,11 +139,14 @@ func outputCache() {
 	filename := fmt.Sprintf("%s.%d", outputFile, os.Getpid())
 
 	// Write to a temp file and rename it so readers never see a partial file.
-	f, err := os.CreateTemp(filepath.Dir(filename), filepath.Base(filename)+".tmp*")
+	// OpenFile with 0644 (subject to umask) keeps the permissions output files
+	// have always had; os.CreateTemp would make them owner-only (0600). The
+	// name only needs to be unique per process, and only one goroutine writes.
+	tmp := filename + ".tmp"
+	f, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return // Fail silently for output functionality
 	}
-	tmp := f.Name()
 	defer func() { _ = os.Remove(tmp) }() // no-op after a successful rename
 
 	if err := writeCache(f); err != nil {

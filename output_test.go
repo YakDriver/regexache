@@ -49,4 +49,22 @@ func TestOutputCache_OneFilePerProcess(t *testing.T) {
 			t.Errorf("expected latest snapshot to contain %q, got:\n%s", s, data)
 		}
 	}
+
+	// Output must get the same permissions as a plain 0644 create under the
+	// current umask, not os.CreateTemp's owner-only 0600.
+	ref := filepath.Join(t.TempDir(), "ref")
+	if err := os.WriteFile(ref, nil, 0644); err != nil {
+		t.Fatal(err)
+	}
+	refInfo, err := os.Stat(ref)
+	if err != nil {
+		t.Fatal(err)
+	}
+	outInfo, err := os.Stat(filepath.Join(dir, want))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := outInfo.Mode().Perm(), refInfo.Mode().Perm(); got != want {
+		t.Errorf("output file mode = %v, want %v", got, want)
+	}
 }
